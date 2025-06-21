@@ -293,6 +293,130 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "Device:R"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 0)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "R"
+				(at 2.032 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "R"
+				(at 0 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at -1.778 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Resistor"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "R res resistor"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "R_*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "R_0_1"
+				(rectangle
+					(start -1.016 -2.54)
+					(end 1.016 2.54)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "R_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "MCU_ST_STM32F4:STM32F411RCTx"
 			(exclude_from_sim no)
 			(in_bom yes)
@@ -2385,6 +2509,26 @@
 	)
 	(wire
 		(pts
+			(xy 128.27 62.23) (xy 137.16 62.23)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "47a4ca69-681d-4272-9b31-a97c6f23462e")
+	)
+	(wire
+		(pts
+			(xy 107.95 57.15) (xy 107.95 58.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "47ce3f8a-a4c6-4b7e-976f-9b0281ce4559")
+	)
+	(wire
+		(pts
 			(xy 82.55 48.26) (xy 93.98 48.26)
 		)
 		(stroke
@@ -2422,6 +2566,16 @@
 			(type default)
 		)
 		(uuid "50b5dc7b-a2ec-461b-9a2d-c0530372df36")
+	)
+	(wire
+		(pts
+			(xy 137.16 57.15) (xy 107.95 57.15)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "57532a85-72aa-4ff1-95c8-9c4402ea9804")
 	)
 	(wire
 		(pts
@@ -2645,6 +2799,16 @@
 	)
 	(wire
 		(pts
+			(xy 120.65 62.23) (xy 119.38 62.23)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b6789ee7-44ed-4809-9fb9-d3524c0bca65")
+	)
+	(wire
+		(pts
 			(xy 105.41 38.1) (xy 105.41 39.37)
 		)
 		(stroke
@@ -2692,6 +2856,16 @@
 			(type default)
 		)
 		(uuid "c2d0f1c7-509f-451e-81d5-e146fbd943e4")
+	)
+	(wire
+		(pts
+			(xy 119.38 62.23) (xy 119.38 63.5)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d9bd580f-3311-4ab0-a77b-dfd0d221a8ed")
 	)
 	(wire
 		(pts
@@ -2762,6 +2936,36 @@
 			(type default)
 		)
 		(uuid "fe5010c4-417c-47c9-a07a-0e402cf69665")
+	)
+	(wire
+		(pts
+			(xy 107.95 66.04) (xy 107.95 67.31)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ff60cf0c-823a-4b71-9018-66e599821873")
+	)
+	(label "NRST"
+		(at 127 57.15 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "53039f89-ba19-4e29-96f4-278f6c906d31")
+	)
+	(label "BOOT0"
+		(at 129.54 62.23 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "ac1d9e69-7b27-4bf5-98ca-c67f9f5fb962")
 	)
 	(symbol
 		(lib_id "Device:FerriteBead")
@@ -3170,6 +3374,73 @@
 			(project "Drone_PCB"
 				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
 					(reference "C6")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 107.95 67.31 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "59f778f1-deec-48cc-b8e1-af6f78517b8e")
+		(property "Reference" "#PWR07"
+			(at 107.95 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 107.95 72.39 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" ""
+			(at 107.95 67.31 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 107.95 67.31 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 107.95 67.31 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "2ec19954-c594-4660-8f3b-74c659a0f57b")
+		)
+		(instances
+			(project "Drone_PCB"
+				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
+					(reference "#PWR07")
 					(unit 1)
 				)
 			)
@@ -3633,6 +3904,76 @@
 			(project "Drone_PCB"
 				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
 					(reference "C8")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 107.95 62.23 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "88c3e744-39eb-4957-b323-eea444e053ce")
+		(property "Reference" "C10"
+			(at 111.76 60.9599 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "100n"
+			(at 111.76 63.4999 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" ""
+			(at 108.9152 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 107.95 62.23 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 107.95 62.23 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "c25aae8e-e3a3-4e77-9d2a-7de15fe6adb5")
+		)
+		(pin "2"
+			(uuid "52c747ae-69c4-4587-aac3-6d4bb385a5f4")
+		)
+		(instances
+			(project "Drone_PCB"
+				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
+					(reference "C10")
 					(unit 1)
 				)
 			)
@@ -4110,6 +4451,140 @@
 			(project "Drone_PCB"
 				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
 					(reference "C3")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 124.46 62.23 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "e43cea2e-b1e6-44e3-869a-3448ba736ebb")
+		(property "Reference" "R1"
+			(at 124.714 64.516 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "10k"
+			(at 124.714 67.056 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 124.46 64.008 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 124.46 62.23 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 124.46 62.23 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "197648ef-a5e8-49f9-8c9b-cab276489e0a")
+		)
+		(pin "2"
+			(uuid "e94caa65-9443-43dc-ba26-7a5b2730c27b")
+		)
+		(instances
+			(project ""
+				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
+					(reference "R1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 119.38 63.5 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "e64187c8-84de-42ca-ab98-f9637020113c")
+		(property "Reference" "#PWR09"
+			(at 119.38 69.85 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 119.38 68.58 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" ""
+			(at 119.38 63.5 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 119.38 63.5 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 119.38 63.5 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "051c057a-425d-478d-9fb6-0ff671a92ca9")
+		)
+		(instances
+			(project "Drone_PCB"
+				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
+					(reference "#PWR09")
 					(unit 1)
 				)
 			)
