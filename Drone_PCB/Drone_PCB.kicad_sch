@@ -5043,6 +5043,18 @@
 		(uuid 36dfabd3-47ce-4e58-a33f-4198938cd08a)
 	)
 	(rectangle
+		(start 17.78 97.79)
+		(end 114.3 195.58)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(fill
+			(type none)
+		)
+		(uuid 8623047b-9192-4530-a457-d1a3c69d6fbf)
+	)
+	(rectangle
 		(start 17.78 35.56)
 		(end 114.3 69.85)
 		(stroke
@@ -5078,6 +5090,18 @@
 		)
 		(uuid "131091a2-9cd8-4aac-9e29-7a435fd0b534")
 	)
+	(text "USB B Micro connector"
+		(exclude_from_sim no)
+		(at 31.496 188.722 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+				(bold yes)
+			)
+		)
+		(uuid "2d017a47-c8aa-4054-818d-845040857d78")
+	)
 	(text "Power Supply"
 		(exclude_from_sim no)
 		(at 37.338 33.274 0)
@@ -5089,6 +5113,30 @@
 			)
 		)
 		(uuid "35131e4a-30a1-4dd6-ba32-cb913ced86f8")
+	)
+	(text "LED indicators"
+		(exclude_from_sim no)
+		(at 34.544 157.48 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+				(bold yes)
+			)
+		)
+		(uuid "399ab7ea-ad3e-4784-b111-99f014b880b1")
+	)
+	(text "Chargning IC"
+		(exclude_from_sim no)
+		(at 85.852 140.462 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+				(bold yes)
+			)
+		)
+		(uuid "41e2a1ef-f46b-4447-8e60-afecb6de395a")
 	)
 	(text "VCC from Li-Ion 3.7V battery"
 		(exclude_from_sim no)
@@ -5139,6 +5187,18 @@
 		)
 		(uuid "8343da95-377b-4102-b2a7-75925a1f32f5")
 	)
+	(text "Anti-discharge scheme"
+		(exclude_from_sim no)
+		(at 79.248 193.548 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+				(bold yes)
+			)
+		)
+		(uuid "8d6816df-f1e9-42c2-b436-88143421ad0b")
+	)
 	(text "Microcontroller"
 		(exclude_from_sim no)
 		(at 145.288 24.638 0)
@@ -5150,6 +5210,18 @@
 			)
 		)
 		(uuid "9e1a2ddb-1544-47a6-a90a-0315f3d1427d")
+	)
+	(text "Charging Section"
+		(exclude_from_sim no)
+		(at 36.576 94.742 0)
+		(effects
+			(font
+				(size 2.54 2.54)
+				(thickness 1.27)
+				(bold yes)
+			)
+		)
+		(uuid "c7243a95-5183-4dfa-8315-8b3881a16be9")
 	)
 	(text "VDDA Filtering"
 		(exclude_from_sim no)
@@ -8322,7 +8394,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Inductor_SMD:L_0603_1608Metric"
 			(at 247.65 41.148 90)
 			(effects
 				(font
@@ -8382,7 +8454,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "100nF"
+		(property "Value" "100n"
 			(at 93.218 149.098 90)
 			(effects
 				(font
@@ -8391,7 +8463,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 93.98 151.4348 0)
 			(effects
 				(font
@@ -8663,7 +8735,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 258.7752 48.26 0)
 			(effects
 				(font
@@ -8800,7 +8872,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 158.4452 86.36 0)
 			(effects
 				(font
@@ -9143,7 +9215,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 182.5752 86.36 0)
 			(effects
 				(font
@@ -9213,7 +9285,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 195.2752 48.26 0)
 			(effects
 				(font
@@ -9349,7 +9421,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
 			(at 138.1252 48.26 0)
 			(effects
 				(font
@@ -10392,7 +10464,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "100nF"
+		(property "Value" "100n"
 			(at 38.608 171.196 0)
 			(effects
 				(font
@@ -10401,7 +10473,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 46.6852 170.18 0)
 			(effects
 				(font
@@ -10678,7 +10750,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "LED"
+		(property "Value" "RED_LED"
 			(at 38.1 124.1424 90)
 			(effects
 				(font
@@ -10687,7 +10759,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "LED_SMD:LED_0603_1608Metric"
 			(at 35.56 124.46 0)
 			(effects
 				(font
@@ -11031,7 +11103,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 160.9852 48.26 0)
 			(effects
 				(font
@@ -11101,7 +11173,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 237.1852 48.26 0)
 			(effects
 				(font
@@ -11318,7 +11390,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 155.9052 67.31 0)
 			(effects
 				(font
@@ -11659,7 +11731,7 @@
 			)
 		)
 		(property "Value" "+3.3VA"
-			(at 216.916 34.036 0)
+			(at 216.408 34.544 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11860,7 +11932,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "100nF"
+		(property "Value" "100n"
 			(at 54.61 165.1 0)
 			(effects
 				(font
@@ -11869,7 +11941,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 61.9252 171.45 0)
 			(effects
 				(font
@@ -12146,7 +12218,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 225.7552 48.26 0)
 			(effects
 				(font
@@ -12216,7 +12288,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 149.5552 48.26 0)
 			(effects
 				(font
@@ -12426,7 +12498,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 183.8452 48.26 0)
 			(effects
 				(font
@@ -12487,7 +12559,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "LED"
+		(property "Value" "GREEN_LED"
 			(at 39.37 137.4774 90)
 			(effects
 				(font
@@ -12496,7 +12568,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "LED_SMD:LED_0603_1608Metric"
 			(at 35.56 134.62 0)
 			(effects
 				(font
@@ -12565,7 +12637,7 @@
 				)
 			)
 		)
-		(property "Value" "LED"
+		(property "Value" "BLUE_LED"
 			(at 82.8675 40.64 0)
 			(effects
 				(font
@@ -12573,7 +12645,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "LED_SMD:LED_0603_1608Metric"
 			(at 81.28 45.72 0)
 			(effects
 				(font
@@ -12783,7 +12855,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 172.4152 48.26 0)
 			(effects
 				(font
@@ -13313,7 +13385,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "1uF"
+		(property "Value" "1u"
 			(at 42.418 51.816 0)
 			(effects
 				(font
@@ -13322,7 +13394,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 40.3352 54.61 0)
 			(effects
 				(font
@@ -13383,7 +13455,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "1uF"
+		(property "Value" "1u"
 			(at 77.47 52.0699 0)
 			(effects
 				(font
@@ -13392,7 +13464,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 74.6252 54.61 0)
 			(effects
 				(font
