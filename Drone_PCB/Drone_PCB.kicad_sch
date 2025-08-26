@@ -4941,304 +4941,6 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Transistor_FET:BSS214NW"
-			(pin_names
-				(hide yes)
-			)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(property "Reference" "Q"
-				(at 5.08 1.905 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left)
-				)
-			)
-			(property "Value" "BSS214NW"
-				(at 5.08 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left)
-				)
-			)
-			(property "Footprint" "Package_TO_SOT_SMD:SOT-323_SC-70"
-				(at 5.08 -1.905 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-						(italic yes)
-					)
-					(justify left)
-					(hide yes)
-				)
-			)
-			(property "Datasheet" "https://www.infineon.com/dgdl/Infineon-BSS214NW-DS-v02_02-en.pdf?fileId=db3a30431b3e89eb011b695aebc01bde"
-				(at 5.08 -3.81 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left)
-					(hide yes)
-				)
-			)
-			(property "Description" "20V Vds, 1.5A Id, N-Channel MOSFET, SOT-323"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_keywords" "N-Channel MOSFET"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_fp_filters" "SOT?323*"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(symbol "BSS214NW_0_1"
-				(polyline
-					(pts
-						(xy 0.254 1.905) (xy 0.254 -1.905)
-					)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0.254 0) (xy -2.54 0)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0.762 2.286) (xy 0.762 1.27)
-					)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0.762 0.508) (xy 0.762 -0.508)
-					)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0.762 -1.27) (xy 0.762 -2.286)
-					)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0.762 -1.778) (xy 3.302 -1.778) (xy 3.302 1.778) (xy 0.762 1.778)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.016 0) (xy 2.032 0.381) (xy 2.032 -0.381) (xy 1.016 0)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(circle
-					(center 1.651 0)
-					(radius 2.794)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 2.54 2.54) (xy 2.54 1.778)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(circle
-					(center 2.54 1.778)
-					(radius 0.254)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(circle
-					(center 2.54 -1.778)
-					(radius 0.254)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(polyline
-					(pts
-						(xy 2.54 -2.54) (xy 2.54 0) (xy 0.762 0)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 2.794 0.508) (xy 2.921 0.381) (xy 3.683 0.381) (xy 3.81 0.254)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 3.302 0.381) (xy 2.921 -0.254) (xy 3.683 -0.254) (xy 3.302 0.381)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-			)
-			(symbol "BSS214NW_1_1"
-				(pin input line
-					(at -5.08 0 0)
-					(length 2.54)
-					(name "G"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 2.54 5.08 270)
-					(length 2.54)
-					(name "D"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "3"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 2.54 -5.08 90)
-					(length 2.54)
-					(name "S"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
 		(symbol "power:+3.3V"
 			(power)
 			(pin_numbers
@@ -6353,6 +6055,12 @@
 		(uuid "884e6cc6-063d-4999-a6ba-aa4a728a7e9e")
 	)
 	(junction
+		(at 45.72 185.42)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "911cd7c1-21ae-4644-be8b-33f86c45565c")
+	)
+	(junction
 		(at 231.14 54.61)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -6417,12 +6125,6 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "b57f2a21-faf9-4954-9782-a922e584a75a")
-	)
-	(junction
-		(at 45.72 185.42)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "b7b3c27a-cf0e-44cb-a258-4157ce2c8068")
 	)
 	(junction
 		(at 220.98 132.08)
@@ -7604,6 +7306,16 @@
 	)
 	(wire
 		(pts
+			(xy 45.72 181.61) (xy 45.72 185.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "500f5dc3-8771-4a59-bc5b-ff4934f19701")
+	)
+	(wire
+		(pts
 			(xy 124.46 41.91) (xy 124.46 40.64)
 		)
 		(stroke
@@ -8274,16 +7986,6 @@
 	)
 	(wire
 		(pts
-			(xy 45.72 177.8) (xy 45.72 185.42)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "9caff0b9-5022-4636-8df8-d65c4cde8461")
-	)
-	(wire
-		(pts
 			(xy 43.18 45.72) (xy 48.26 45.72)
 		)
 		(stroke
@@ -8474,7 +8176,7 @@
 	)
 	(wire
 		(pts
-			(xy 45.72 168.91) (xy 45.72 170.18)
+			(xy 45.72 168.91) (xy 45.72 173.99)
 		)
 		(stroke
 			(width 0)
@@ -9453,18 +9155,6 @@
 			(justify left bottom)
 		)
 		(uuid "7860bcc2-ecdd-4f22-8afe-1052a4aa3052")
-	)
-	(label "VCC"
-		(at 27.94 129.54 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-				(thickness 0.254)
-				(bold yes)
-			)
-			(justify left bottom)
-		)
-		(uuid "7d4deb0c-dcdc-4e78-b538-6a5604258289")
 	)
 	(label "UART_TX"
 		(at 156.21 88.9 0)
@@ -10777,6 +10467,80 @@
 		)
 	)
 	(symbol
+		(lib_id "Transistor_FET:AO3400A")
+		(at 71.12 181.61 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "3648fd2d-6701-42af-b37b-83ffd6271688")
+		(property "Reference" "Q1"
+			(at 71.12 187.96 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "AO3400A"
+			(at 71.12 190.5 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Package_TO_SOT_SMD:SOT-23"
+			(at 69.215 186.69 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "http://www.aosmd.com/pdfs/datasheet/AO3400A.pdf"
+			(at 67.31 186.69 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+		(property "Description" "30V Vds, 5.7A Id, N-Channel MOSFET, SOT-23"
+			(at 71.12 181.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "3e2f527e-c640-4fb3-9c94-c554b322834c")
+		)
+		(pin "3"
+			(uuid "9d4280f9-4c92-4c6f-8535-1d998d5158b9")
+		)
+		(pin "1"
+			(uuid "d14bea57-6f0d-4654-8927-f4dc298d0dc7")
+		)
+		(instances
+			(project "Drone_PCB"
+				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
+					(reference "Q1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Switch:SW_DPST_x2")
 		(at 31.75 45.72 0)
 		(unit 1)
@@ -11554,80 +11318,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Transistor_FET:BSS214NW")
-		(at 71.12 181.61 270)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "51262e73-301e-4050-ba94-a63603794efd")
-		(property "Reference" "Q1"
-			(at 71.12 187.96 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "BSS214NW"
-			(at 71.12 190.5 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Package_TO_SOT_SMD:SOT-323_SC-70"
-			(at 69.215 186.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-					(italic yes)
-				)
-				(justify left)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "https://www.infineon.com/dgdl/Infineon-BSS214NW-DS-v02_02-en.pdf?fileId=db3a30431b3e89eb011b695aebc01bde"
-			(at 67.31 186.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-				(hide yes)
-			)
-		)
-		(property "Description" "20V Vds, 1.5A Id, N-Channel MOSFET, SOT-323"
-			(at 71.12 181.61 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "e6f5bbd1-2ab2-4898-899c-aba6ca135445")
-		)
-		(pin "3"
-			(uuid "d10f69ea-d49d-45df-a630-ebfc7778929c")
-		)
-		(pin "2"
-			(uuid "a9db23e7-7df1-48e1-8eff-539e5d3c48b1")
-		)
-		(instances
-			(project ""
-				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
-					(reference "Q1")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Device:R")
 		(at 93.98 167.64 90)
 		(mirror x)
@@ -12089,7 +11779,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 45.72 173.99 0)
+		(at 45.72 177.8 0)
 		(mirror x)
 		(unit 1)
 		(exclude_from_sim no)
@@ -12098,7 +11788,7 @@
 		(dnp no)
 		(uuid "5d5d16e2-10d7-4851-975b-ae5dfa7fad72")
 		(property "Reference" "C15"
-			(at 38.608 173.736 0)
+			(at 38.608 177.546 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12107,7 +11797,7 @@
 			)
 		)
 		(property "Value" "100n"
-			(at 38.608 171.196 0)
+			(at 38.608 175.006 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12116,7 +11806,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 46.6852 170.18 0)
+			(at 46.6852 173.99 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12125,7 +11815,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 45.72 173.99 0)
+			(at 45.72 177.8 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12134,7 +11824,7 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
-			(at 45.72 173.99 0)
+			(at 45.72 177.8 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12288,6 +11978,72 @@
 			(project "Drone_PCB"
 				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
 					(reference "R9")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:VBUS")
+		(at 27.94 129.54 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "6654e726-04c7-4655-8e10-5121eaa5f630")
+		(property "Reference" "#PWR033"
+			(at 27.94 133.35 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "VBUS"
+			(at 27.94 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 27.94 129.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 27.94 129.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"VBUS\""
+			(at 27.94 129.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "9999de88-8c35-46d2-bb2f-b8fbeb727ca6")
+		)
+		(instances
+			(project "Drone_PCB"
+				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
+					(reference "#PWR033")
 					(unit 1)
 				)
 			)
@@ -13061,6 +12817,80 @@
 			(project "Drone_PCB"
 				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
 					(reference "C10")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Transistor_FET:AO3400A")
+		(at 83.82 181.61 90)
+		(mirror x)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "8a1d5a23-2d7a-4c53-8862-affa2262cf3c")
+		(property "Reference" "Q2"
+			(at 83.82 187.96 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "AO3400A"
+			(at 83.82 190.5 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Package_TO_SOT_SMD:SOT-23"
+			(at 85.725 186.69 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "http://www.aosmd.com/pdfs/datasheet/AO3400A.pdf"
+			(at 87.63 186.69 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+		(property "Description" "30V Vds, 5.7A Id, N-Channel MOSFET, SOT-23"
+			(at 83.82 181.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "b96e72f4-df04-4003-991c-44f810895e3f")
+		)
+		(pin "3"
+			(uuid "99883c30-004f-401a-b610-c9336498f1fe")
+		)
+		(pin "1"
+			(uuid "765345f5-06b4-4676-8839-3f9a56dc0c65")
+		)
+		(instances
+			(project "Drone_PCB"
+				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
+					(reference "Q2")
 					(unit 1)
 				)
 			)
@@ -15003,80 +14833,6 @@
 			(project "Drone_PCB"
 				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
 					(reference "J5")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Transistor_FET:BSS214NW")
-		(at 83.82 181.61 90)
-		(mirror x)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "debf22b2-7891-4eb9-abe3-d14f0f8e3022")
-		(property "Reference" "Q2"
-			(at 83.82 187.96 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "BSS214NW"
-			(at 83.82 190.5 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Package_TO_SOT_SMD:SOT-323_SC-70"
-			(at 85.725 186.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-					(italic yes)
-				)
-				(justify left)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "https://www.infineon.com/dgdl/Infineon-BSS214NW-DS-v02_02-en.pdf?fileId=db3a30431b3e89eb011b695aebc01bde"
-			(at 87.63 186.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-				(hide yes)
-			)
-		)
-		(property "Description" "20V Vds, 1.5A Id, N-Channel MOSFET, SOT-323"
-			(at 83.82 181.61 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "c25cf6a7-505b-41bf-a0e7-2c24f50453f5")
-		)
-		(pin "3"
-			(uuid "0f609574-ed7f-45fd-93d4-58a325a6f188")
-		)
-		(pin "2"
-			(uuid "4f9a4cef-8db1-4201-8724-826c5cad50d3")
-		)
-		(instances
-			(project "Drone_PCB"
-				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
-					(reference "Q2")
 					(unit 1)
 				)
 			)
