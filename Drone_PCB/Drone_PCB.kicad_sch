@@ -10520,6 +10520,16 @@
 		)
 		(uuid "88ae6ffa-5cc1-44f5-9349-7506d33ba279")
 	)
+	(label "LED_SIGNAL_VIN"
+		(at 154.94 109.22 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "8bcf80d7-5356-4d99-8069-ffceba61d9a2")
+	)
 	(label "HSE_OUT"
 		(at 158.75 63.5 0)
 		(effects
@@ -13968,7 +13978,7 @@
 				)
 			)
 		)
-		(property "Value" "220"
+		(property "Value" "1k"
 			(at 151.384 105.41 0)
 			(effects
 				(font
