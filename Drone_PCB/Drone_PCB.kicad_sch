@@ -6823,131 +6823,6 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "power:VCC"
-			(power)
-			(pin_numbers
-				(hide yes)
-			)
-			(pin_names
-				(offset 0)
-				(hide yes)
-			)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(property "Reference" "#PWR"
-				(at 0 -3.81 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Value" "VCC"
-				(at 0 3.556 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Footprint" ""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Datasheet" ""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Description" "Power symbol creates a global label with name \"VCC\""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_keywords" "global power"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(symbol "VCC_0_1"
-				(polyline
-					(pts
-						(xy -0.762 1.27) (xy 0 2.54)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0 2.54) (xy 0.762 1.27)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0 0) (xy 0 2.54)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-			)
-			(symbol "VCC_1_1"
-				(pin power_in line
-					(at 0 0 90)
-					(length 0)
-					(name "~"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
 	)
 	(rectangle
 		(start 106.68 19.05)
@@ -10361,6 +10236,16 @@
 		)
 		(uuid "0bb190b1-4406-408f-b9ba-a3a24fac9882")
 	)
+	(label "M_RB"
+		(at 246.38 87.63 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "0c835019-e221-4496-8e7a-0059c09301b4")
+	)
 	(label "TEMP"
 		(at 85.09 124.46 0)
 		(effects
@@ -10393,6 +10278,16 @@
 		)
 		(uuid "1aa16075-9e82-4546-b017-5c066203ff41")
 	)
+	(label "M_LF"
+		(at 266.7 53.34 90)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "2495e5e1-ce1d-4580-a007-2f8aedc338ab")
+	)
 	(label "OUT+"
 		(at 19.05 45.72 0)
 		(effects
@@ -10405,7 +10300,7 @@
 		)
 		(uuid "281381bc-7329-400c-832e-6f1032ac4d18")
 	)
-	(label "MOTOR_RF"
+	(label "PWM_RF"
 		(at 204.47 76.2 0)
 		(effects
 			(font
@@ -10489,7 +10384,7 @@
 		)
 		(uuid "53a8245e-15d6-401d-9ce6-88bb80171cf1")
 	)
-	(label "MOTOR_LB"
+	(label "PWM_LB"
 		(at 204.47 71.12 0)
 		(effects
 			(font
@@ -10509,7 +10404,7 @@
 		)
 		(uuid "55dac862-434c-4397-a897-54a739acc6c4")
 	)
-	(label "MOTOR_LF"
+	(label "PWM_LF"
 		(at 204.47 73.66 0)
 		(effects
 			(font
@@ -10689,7 +10584,7 @@
 		)
 		(uuid "9d792a00-d8b4-4e54-a10e-c18d7b1c51cd")
 	)
-	(label "MOTOR_RB"
+	(label "PWM_RB"
 		(at 204.47 78.74 0)
 		(effects
 			(font
@@ -10719,6 +10614,16 @@
 		)
 		(uuid "a691b550-f8b2-45bf-8983-16d665068ae1")
 	)
+	(label "M_RF"
+		(at 273.05 87.63 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "ab8c4f1e-efa7-4690-8a1c-ba9c352f1f2c")
+	)
 	(label "BOOT0"
 		(at 160.02 55.88 0)
 		(effects
@@ -10740,6 +10645,16 @@
 			(justify right bottom)
 		)
 		(uuid "b79db9b9-e27a-41f9-9c0f-8757e8f527d2")
+	)
+	(label "M_LB"
+		(at 240.03 53.34 90)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "ca53ca37-262f-4e8d-9cad-304f919ea79b")
 	)
 	(label "INT"
 		(at 237.49 121.92 180)
@@ -13830,71 +13745,6 @@
 			(project "Drone_PCB"
 				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
 					(reference "#FLG03")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:VCC")
-		(at 212.09 50.8 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "6b2be877-8f29-4333-abb9-3e20d241fc18")
-		(property "Reference" "#PWR022"
-			(at 212.09 54.61 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "VCC"
-			(at 209.55 48.006 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 212.09 50.8 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 212.09 50.8 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"VCC\""
-			(at 212.09 50.8 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "424aa7c3-84c6-45f7-b537-75cb382d6bc1")
-		)
-		(instances
-			(project "Drone_PCB"
-				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
-					(reference "#PWR022")
 					(unit 1)
 				)
 			)
@@ -17275,6 +17125,71 @@
 			(project "Drone_PCB"
 				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
 					(reference "R3")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+3.3V")
+		(at 212.09 50.8 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "f3200951-b3d4-43da-996d-ed0ce7d4a9b8")
+		(property "Reference" "#PWR022"
+			(at 212.09 54.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+3.3V"
+			(at 211.836 46.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 212.09 50.8 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 212.09 50.8 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+3.3V\""
+			(at 212.09 50.8 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "7e36ca4c-c174-4966-a539-716239d69834")
+		)
+		(instances
+			(project "Drone_PCB"
+				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
+					(reference "#PWR022")
 					(unit 1)
 				)
 			)
