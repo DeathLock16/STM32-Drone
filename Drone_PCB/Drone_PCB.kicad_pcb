@@ -3952,7 +3952,7 @@
 			(uuid "7a7f9e9b-83a2-42ac-bf57-6ebbaf07acee")
 		)
 		(embedded_fonts no)
-		(model "${KICAD9_3DMODEL_DIR}/Package_SO.3dshapes/SOIC-8-1EP_3.9x4.9mm_P1.27mm_EP2.41x3.3mm.wrl"
+		(model "${KICAD9_3DMODEL_DIR}/Package_SO.3dshapes/SOIC-8-1EP_3.9x4.9mm_P1.27mm_EP2.41x3.81mm.step"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -9721,15 +9721,15 @@
 			(uuid "3338efbb-6adb-4412-9234-31ed5cf27be9")
 		)
 		(embedded_fonts no)
-		(model "${KICAD9_3DMODEL_DIR}/Connector_USB.3dshapes/USB_Micro-B_Wuerth_629105150521.wrl"
+		(model "${KIPRJMOD}/629105150521.stp"
 			(offset
-				(xyz 0 0 0)
+				(xyz 0 1 1)
 			)
 			(scale
 				(xyz 1 1 1)
 			)
 			(rotate
-				(xyz 0 0 0)
+				(xyz -0 -0 -0)
 			)
 		)
 	)
