@@ -7609,12 +7609,6 @@
 		(color 0 0 0 0)
 		(uuid "f788711f-d51d-405d-b13c-be8df4bfe08a")
 	)
-	(junction
-		(at 43.18 45.72)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "f9d40a82-47d3-405e-9386-f62499718553")
-	)
 	(no_connect
 		(at 167.64 101.6)
 		(uuid "02bab3c0-4c24-4aa8-9d84-aa373cc837c7")
@@ -7944,6 +7938,16 @@
 			(type default)
 		)
 		(uuid "0dc77386-5533-4429-b17b-b85c7b0ff0f9")
+	)
+	(wire
+		(pts
+			(xy 83.82 119.38) (xy 86.36 119.38)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0f008dc4-3d31-48c2-a00f-e82d5381860a")
 	)
 	(wire
 		(pts
@@ -8937,16 +8941,6 @@
 	)
 	(wire
 		(pts
-			(xy 83.82 119.38) (xy 91.44 119.38)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "6eea1f26-357a-4eec-ae0c-3ad6206aa28b")
-	)
-	(wire
-		(pts
 			(xy 73.66 46.99) (xy 73.66 45.72)
 		)
 		(stroke
@@ -9387,16 +9381,6 @@
 	)
 	(wire
 		(pts
-			(xy 43.18 45.72) (xy 48.26 45.72)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "9ecbd49f-8c2d-4e96-b980-953afeadcf05")
-	)
-	(wire
-		(pts
 			(xy 203.2 109.22) (xy 205.74 109.22)
 		)
 		(stroke
@@ -9497,7 +9481,7 @@
 	)
 	(wire
 		(pts
-			(xy 39.37 45.72) (xy 43.18 45.72)
+			(xy 39.37 45.72) (xy 48.26 45.72)
 		)
 		(stroke
 			(width 0)
@@ -10335,6 +10319,16 @@
 		)
 		(uuid "ff7aabda-59fa-419b-8783-a3380206bf6d")
 	)
+	(label "PWR"
+		(at 41.91 45.72 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "0450396d-cb01-48f2-b743-9dfc62490234")
+	)
 	(label "GND"
 		(at 115.57 93.98 0)
 		(effects
@@ -10366,6 +10360,16 @@
 			(justify right bottom)
 		)
 		(uuid "0bb190b1-4406-408f-b9ba-a3a24fac9882")
+	)
+	(label "TEMP"
+		(at 85.09 124.46 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "189ceb43-ab2e-4b44-b984-2cb99b92a5e8")
 	)
 	(label "OUT+"
 		(at 82.55 144.78 270)
@@ -10435,6 +10439,16 @@
 		)
 		(uuid "374ccf2c-6ce9-4a6a-a928-1b7fe74d23f6")
 	)
+	(label "GND"
+		(at 78.74 138.43 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "43b3a87d-992e-41c4-b71f-f093f85b4f12")
+	)
 	(label "HSE_IN"
 		(at 158.75 60.96 0)
 		(effects
@@ -10444,6 +10458,16 @@
 			(justify left bottom)
 		)
 		(uuid "46260b38-90d8-4a9e-9aac-7e1c55de695f")
+	)
+	(label "CS"
+		(at 87.63 167.64 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "495156e9-5529-4c7c-a64d-65f25d0c0262")
 	)
 	(label "NRST"
 		(at 157.48 50.8 0)
@@ -10475,6 +10499,16 @@
 		)
 		(uuid "54293088-4d5d-45ff-ad67-49664ddac05b")
 	)
+	(label "GND"
+		(at 62.23 172.72 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "55dac862-434c-4397-a897-54a739acc6c4")
+	)
 	(label "MOTOR_LF"
 		(at 204.47 73.66 0)
 		(effects
@@ -10484,6 +10518,16 @@
 			(justify left bottom)
 		)
 		(uuid "5b133e16-fd7a-42c1-a64c-a81a65b53b74")
+	)
+	(label "Q12"
+		(at 78.74 184.15 90)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "6112589c-0f82-40b4-bbbc-54be5dea2351")
 	)
 	(label "ADO"
 		(at 237.49 124.46 180)
@@ -10526,6 +10570,26 @@
 			(justify left bottom)
 		)
 		(uuid "7860bcc2-ecdd-4f22-8afe-1052a4aa3052")
+	)
+	(label "OD"
+		(at 71.12 175.26 90)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "83de485c-d77b-450d-a65a-e44e7c7593fc")
+	)
+	(label "OC"
+		(at 83.82 173.99 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "84918903-4682-481b-a1ce-ae626f88abc5")
 	)
 	(label "SWCLK"
 		(at 220.98 110.49 0)
@@ -10570,6 +10634,28 @@
 			(justify left bottom)
 		)
 		(uuid "8c4701f9-dc90-4037-91a1-cf302ab6fbd5")
+	)
+	(label "VIN"
+		(at 66.04 162.56 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "8fb674f0-56e1-48a7-89ab-f29e78f71e26")
+	)
+	(label "CHARGER"
+		(at 60.96 149.86 90)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+				(bold yes)
+			)
+			(justify left bottom)
+		)
+		(uuid "8fd026b8-68c4-4321-8409-c1760108a1b2")
 	)
 	(label "LED_SIGNAL"
 		(at 156.21 96.52 0)
@@ -10677,6 +10763,18 @@
 		)
 		(uuid "e273304c-f7df-49e6-b521-35473fe9d10c")
 	)
+	(label "CHARGER"
+		(at 86.36 119.38 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+				(bold yes)
+			)
+			(justify left bottom)
+		)
+		(uuid "e4a5499f-b138-4044-9526-dc9ac2ed32c1")
+	)
 	(label "SCL"
 		(at 237.49 134.62 180)
 		(effects
@@ -10708,6 +10806,16 @@
 			(justify left bottom)
 		)
 		(uuid "f0f4b40c-38bc-448a-be6b-ab8389ee1214")
+	)
+	(label "PROG"
+		(at 85.09 127 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "f1738e62-82ec-44c4-9d04-0399a0183949")
 	)
 	(label "TX"
 		(at 115.57 99.06 0)
@@ -11576,10 +11684,9 @@
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "236a2883-c201-470d-8dbf-8e826fd20f48")
 		(property "Reference" "SW2"
-			(at 31.75 39.37 0)
+			(at 31.75 47.498 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11587,14 +11694,14 @@
 			)
 		)
 		(property "Value" "SW_SPST"
-			(at 31.75 41.91 0)
+			(at 32.258 49.784 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 			)
 		)
-		(property "Footprint" "Button_Switch_SMD:SW_DIP_SPSTx01_Slide_6.7x4.1mm_W6.73mm_P2.54mm_LowProfile_JPin"
+		(property "Footprint" "Button_Switch_THT:SW_CK_JS202011AQN_DPDT_Angled"
 			(at 31.75 45.72 0)
 			(effects
 				(font
@@ -12763,73 +12870,6 @@
 		)
 	)
 	(symbol
-		(lib_id "power:VCC")
-		(at 91.44 119.38 270)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "4fd38240-690d-494b-aa00-946886f8f608")
-		(property "Reference" "#PWR030"
-			(at 87.63 119.38 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "VCC"
-			(at 95.25 119.3799 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" ""
-			(at 91.44 119.38 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 91.44 119.38 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"VCC\""
-			(at 91.44 119.38 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "2ce8997c-3e3c-4907-ba87-f06b8082e2bb")
-		)
-		(instances
-			(project ""
-				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
-					(reference "#PWR030")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_name "AO3400A_2")
 		(lib_id "Transistor_FET:AO3400A")
 		(at 264.16 66.04 0)
@@ -13731,7 +13771,7 @@
 	)
 	(symbol
 		(lib_id "power:PWR_FLAG")
-		(at 43.18 45.72 0)
+		(at 39.37 45.72 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -13740,7 +13780,7 @@
 		(fields_autoplaced yes)
 		(uuid "6ae23419-5b73-4344-aa38-7cea1f070b90")
 		(property "Reference" "#FLG03"
-			(at 43.18 43.815 0)
+			(at 39.37 43.815 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13749,7 +13789,7 @@
 			)
 		)
 		(property "Value" "PWR_FLAG"
-			(at 43.18 40.64 0)
+			(at 39.37 40.64 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13757,7 +13797,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 43.18 45.72 0)
+			(at 39.37 45.72 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13766,7 +13806,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 43.18 45.72 0)
+			(at 39.37 45.72 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13775,7 +13815,7 @@
 			)
 		)
 		(property "Description" "Special symbol for telling ERC where power comes from"
-			(at 43.18 45.72 0)
+			(at 39.37 45.72 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15158,72 +15198,6 @@
 			(project ""
 				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
 					(reference "J1")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:VCC")
-		(at 60.96 149.86 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "ad2068f2-9dae-412d-8293-cb6009e28eb7")
-		(property "Reference" "#PWR031"
-			(at 60.96 153.67 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "VCC"
-			(at 60.96 144.78 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 60.96 149.86 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 60.96 149.86 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"VCC\""
-			(at 60.96 149.86 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "1e5f4fdd-cada-4099-b62a-2b4c0531989a")
-		)
-		(instances
-			(project "Drone_PCB"
-				(path "/2c198202-91eb-4035-8605-360d42f3c3f5"
-					(reference "#PWR031")
 					(unit 1)
 				)
 			)
