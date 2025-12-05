@@ -1,0 +1,155 @@
+<circuit version="1.1.0-SR1" rev="2005" stepSize="1000000" stepsPS="1000000" NLsteps="100000" reaStep="1000000" animate="0" >
+
+<item itemtype="DcMotor" CircId="DcMotor-1" mainComp="false" Show_id="true" Show_Val="false" Pos="420,-296" rotation="0" hflip="1" vflip="1" label="M_RF" idLabPos="-10.7407,-48.8661" labelrot="0" valLabPos="-14,36" valLabRot="0" RPM_Nominal="42000 _RPM" Volt_Nominal="3.3 V" Resistance="1.2 Ω" />
+
+<item itemtype="DcMotor" CircId="DcMotor-5" mainComp="false" Show_id="true" Show_Val="false" Pos="312,-296" rotation="0" hflip="1" vflip="1" label="M_LF" idLabPos="-10.3076,-48.4331" labelrot="0" valLabPos="-14,36" valLabRot="0" RPM_Nominal="42000 _RPM" Volt_Nominal="3.3 V" Resistance="1.2 Ω" />
+
+<item itemtype="DcMotor" CircId="DcMotor-6" mainComp="false" Show_id="true" Show_Val="false" Pos="164,-296" rotation="0" hflip="1" vflip="1" label="M_RB" idLabPos="-12.4729,-49.2992" labelrot="0" valLabPos="-14,36" valLabRot="0" RPM_Nominal="42000 _RPM" Volt_Nominal="3.3 V" Resistance="1.2 Ω" />
+
+<item itemtype="DcMotor" CircId="DcMotor-7" mainComp="false" Show_id="true" Show_Val="false" Pos="52,-296" rotation="0" hflip="1" vflip="1" label="M_LB" idLabPos="-10.7407,-47.5669" labelrot="0" valLabPos="-14,36" valLabRot="0" RPM_Nominal="42000 _RPM" Volt_Nominal="3.3 V" Resistance="1.2 Ω" />
+
+<item itemtype="Fixed Voltage" CircId="Fixed Voltage-8" mainComp="false" ShowProp="Voltage" Show_id="false" Show_Val="true" Pos="-116,-424" rotation="0" hflip="1" vflip="1" label="PWR" idLabPos="-64,-24" labelrot="0" valLabPos="-7.21243,-29.8964" valLabRot="0" Voltage="3.7 V" Out="true" />
+
+<item itemtype="Diode" CircId="Diode-14" mainComp="false" Show_id="false" Show_Val="false" Pos="104,-384" rotation="270" hflip="1" vflip="1" label="Diode-14" idLabPos="-16,-24" labelrot="0" valLabPos="-16,6" valLabRot="0" Model="1N5711 Schottky" Threshold="0.216425 V" MaxCurrent="1 A" Resistance="30 mΩ" BrkDownV="40 V" SatCurrent="10 µA" EmCoef="1.1" />
+
+<item itemtype="Diode" CircId="Diode-15" mainComp="false" Show_id="false" Show_Val="false" Pos="216,-384" rotation="270" hflip="1" vflip="1" label="Diode-15" idLabPos="-16,-24" labelrot="0" valLabPos="-16,6" valLabRot="0" Model="1N5711 Schottky" Threshold="0.216425 V" MaxCurrent="1 A" Resistance="30 mΩ" BrkDownV="40 V" SatCurrent="10 µA" EmCoef="1.1" />
+
+<item itemtype="Diode" CircId="Diode-16" mainComp="false" Show_id="false" Show_Val="false" Pos="360,-384" rotation="270" hflip="1" vflip="1" label="Diode-16" idLabPos="-16,-24" labelrot="0" valLabPos="-16,6" valLabRot="0" Model="1N5711 Schottky" Threshold="0.216425 V" MaxCurrent="1 A" Resistance="30 mΩ" BrkDownV="40 V" SatCurrent="10 µA" EmCoef="1.1" />
+
+<item itemtype="Diode" CircId="Diode-17" mainComp="false" Show_id="false" Show_Val="false" Pos="468,-388" rotation="270" hflip="1" vflip="1" label="Diode-17" idLabPos="-16,-24" labelrot="0" valLabPos="-16,6" valLabRot="0" Model="1N5711 Schottky" Threshold="0.216425 V" MaxCurrent="1 A" Resistance="30 mΩ" BrkDownV="40 V" SatCurrent="10 µA" EmCoef="1.1" />
+
+<item itemtype="Mosfet" CircId="Mosfet-22" mainComp="false" Show_id="false" Show_Val="false" Pos="96,-248" rotation="0" hflip="1" vflip="1" label="Mosfet-22" idLabPos="18,0" labelrot="0" valLabPos="-16,20" valLabRot="0" P_Channel="false" Depletion="false" RDSon="40 mΩ" Threshold="3 V" />
+
+<item itemtype="Mosfet" CircId="Mosfet-23" mainComp="false" Show_id="false" Show_Val="false" Pos="208,-248" rotation="0" hflip="1" vflip="1" label="Mosfet-23" idLabPos="18,0" labelrot="0" valLabPos="-16,20" valLabRot="0" P_Channel="false" Depletion="false" RDSon="40 mΩ" Threshold="3 V" />
+
+<item itemtype="Mosfet" CircId="Mosfet-24" mainComp="false" Show_id="false" Show_Val="false" Pos="352,-248" rotation="0" hflip="1" vflip="1" label="Mosfet-24" idLabPos="18,0" labelrot="0" valLabPos="-16,20" valLabRot="0" P_Channel="false" Depletion="false" RDSon="40 mΩ" Threshold="3 V" />
+
+<item itemtype="Mosfet" CircId="Mosfet-25" mainComp="false" Show_id="false" Show_Val="false" Pos="460,-248" rotation="0" hflip="1" vflip="1" label="Mosfet-25" idLabPos="18,0" labelrot="0" valLabPos="-16,20" valLabRot="0" P_Channel="false" Depletion="false" RDSon="40 mΩ" Threshold="3 V" />
+
+<item itemtype="Ground" CircId="Ground-30" mainComp="false" Show_id="false" Show_Val="false" Pos="104,-180" rotation="0" hflip="1" vflip="1" label="Ground-30" idLabPos="-16,8" labelrot="0" valLabPos="-16,20" valLabRot="0" />
+
+<item itemtype="Voltage Source" CircId="Voltage Source-34" mainComp="false" ShowProp="MaxValue" Show_id="false" Show_Val="true" Pos="124,60" rotation="0" hflip="1" vflip="1" label="Voltage Source-34" idLabPos="-32,-48" labelrot="0" valLabPos="-8,30" valLabRot="0" Running="true" Value_Volt="5 V" MaxValue="5 V" MinValue="0 V" />
+
+<item itemtype="Ssd1306" CircId="Ssd1306-38" mainComp="false" Show_id="true" Show_Val="false" Pos="572,-104" rotation="0" hflip="1" vflip="1" label="Ssd1306-38" idLabPos="-32,-60" labelrot="0" valLabPos="-16,20" valLabRot="0" Color="White" Width="128 _px" Height="64 _px" Rotate="true" Control_Code="60" Frequency="100 _kHz" />
+
+<item itemtype="Subcircuit" CircId="Uno-39" mainComp="false" Show_id="true" Show_Val="false" Pos="228,-144" rotation="90" hflip="1" vflip="1" label="Uno-39" idLabPos="0,-20" labelrot="0" valLabPos="-16,20" valLabRot="0" Logic_Symbol="false">
+<mainCompProps MainCompId="mega328-109" Frequency="16 MHz" Program="../../../../Desktop/sketch/build/arduino.avr.uno/sketch.ino.hex" Auto_Load="false" saveEepr="true" MainMcu="true" SerialMon="-1" />
+</item>
+
+<item itemtype="Node" CircId="Node-9" mainComp="false" Pos="272,-424" />
+
+<item itemtype="Node" CircId="Node-10" mainComp="false" Pos="124,-424" />
+
+<item itemtype="Node" CircId="Node-11" mainComp="false" Pos="12,-424" />
+
+<item itemtype="Node" CircId="Node-18" mainComp="false" Pos="104,-424" />
+
+<item itemtype="Node" CircId="Node-19" mainComp="false" Pos="216,-424" />
+
+<item itemtype="Node" CircId="Node-20" mainComp="false" Pos="360,-424" />
+
+<item itemtype="Node" CircId="Node-21" mainComp="false" Pos="380,-424" />
+
+<item itemtype="Node" CircId="Node-26" mainComp="false" Pos="468,-296" />
+
+<item itemtype="Node" CircId="Node-27" mainComp="false" Pos="360,-296" />
+
+<item itemtype="Node" CircId="Node-28" mainComp="false" Pos="216,-296" />
+
+<item itemtype="Node" CircId="Node-29" mainComp="false" Pos="104,-296" />
+
+<item itemtype="Node" CircId="Node-31" mainComp="false" Pos="104,-212" />
+
+<item itemtype="Node" CircId="Node-32" mainComp="false" Pos="216,-212" />
+
+<item itemtype="Node" CircId="Node-33" mainComp="false" Pos="360,-212" />
+
+<item itemtype="Node" CircId="Node-45" mainComp="false" Pos="284,-212" />
+
+<item itemtype="Connector" uid="Connector-2" startpinid="DcMotor-5-lPin" endpinid="Node-9-1" pointList="272,-296,272,-424" />
+
+<item itemtype="Connector" uid="Connector-5" startpinid="DcMotor-6-lPin" endpinid="Node-10-1" pointList="124,-296,124,-424" />
+
+<item itemtype="Connector" uid="Connector-8" startpinid="DcMotor-7-lPin" endpinid="Node-11-1" pointList="12,-296,12,-424" />
+
+<item itemtype="Connector" uid="Connector-9" startpinid="Fixed Voltage-8-outnod" endpinid="Node-11-0" pointList="-100,-424,12,-424" />
+
+<item itemtype="Connector" uid="Connector-15" startpinid="Diode-14-rPin" endpinid="Node-18-1" pointList="104,-400,104,-424" />
+
+<item itemtype="Connector" uid="Connector-16" startpinid="Node-11-2" endpinid="Node-18-0" pointList="12,-424,104,-424" />
+
+<item itemtype="Connector" uid="Connector-17" startpinid="Node-18-2" endpinid="Node-10-0" pointList="104,-424,124,-424" />
+
+<item itemtype="Connector" uid="Connector-18" startpinid="Diode-15-rPin" endpinid="Node-19-1" pointList="216,-400,216,-424" />
+
+<item itemtype="Connector" uid="Connector-19" startpinid="Node-10-2" endpinid="Node-19-0" pointList="124,-424,216,-424" />
+
+<item itemtype="Connector" uid="Connector-20" startpinid="Node-19-2" endpinid="Node-9-0" pointList="216,-424,272,-424" />
+
+<item itemtype="Connector" uid="Connector-21" startpinid="Diode-16-rPin" endpinid="Node-20-1" pointList="360,-400,360,-424" />
+
+<item itemtype="Connector" uid="Connector-22" startpinid="Node-9-2" endpinid="Node-20-0" pointList="272,-424,360,-424" />
+
+<item itemtype="Connector" uid="Connector-24" startpinid="Diode-17-rPin" endpinid="Node-21-1" pointList="468,-404,468,-424,380,-424" />
+
+<item itemtype="Connector" uid="Connector-25" startpinid="Node-20-2" endpinid="Node-21-0" pointList="360,-424,380,-424" />
+
+<item itemtype="Connector" uid="Connector-26" startpinid="Node-21-2" endpinid="DcMotor-1-lPin" pointList="380,-424,380,-296" />
+
+<item itemtype="Connector" uid="Connector-27" startpinid="Mosfet-25-Dren" endpinid="Node-26-1" pointList="468,-264,468,-296" />
+
+<item itemtype="Connector" uid="Connector-28" startpinid="DcMotor-1-rPin" endpinid="Node-26-0" pointList="460,-296,468,-296" />
+
+<item itemtype="Connector" uid="Connector-29" startpinid="Node-26-2" endpinid="Diode-17-lPin" pointList="468,-296,468,-372" />
+
+<item itemtype="Connector" uid="Connector-30" startpinid="Mosfet-24-Dren" endpinid="Node-27-1" pointList="360,-264,360,-296" />
+
+<item itemtype="Connector" uid="Connector-31" startpinid="DcMotor-5-rPin" endpinid="Node-27-0" pointList="352,-296,360,-296" />
+
+<item itemtype="Connector" uid="Connector-32" startpinid="Node-27-2" endpinid="Diode-16-lPin" pointList="360,-296,360,-368" />
+
+<item itemtype="Connector" uid="Connector-33" startpinid="Mosfet-23-Dren" endpinid="Node-28-1" pointList="216,-264,216,-296" />
+
+<item itemtype="Connector" uid="Connector-34" startpinid="DcMotor-6-rPin" endpinid="Node-28-0" pointList="204,-296,216,-296" />
+
+<item itemtype="Connector" uid="Connector-35" startpinid="Node-28-2" endpinid="Diode-15-lPin" pointList="216,-296,216,-368" />
+
+<item itemtype="Connector" uid="Connector-36" startpinid="Mosfet-22-Dren" endpinid="Node-29-1" pointList="104,-264,104,-296" />
+
+<item itemtype="Connector" uid="Connector-37" startpinid="DcMotor-7-rPin" endpinid="Node-29-0" pointList="92,-296,104,-296" />
+
+<item itemtype="Connector" uid="Connector-38" startpinid="Node-29-2" endpinid="Diode-14-lPin" pointList="104,-296,104,-368" />
+
+<item itemtype="Connector" uid="Connector-41" startpinid="Ground-30-Gnd" endpinid="Node-31-0" pointList="104,-196,104,-212" />
+
+<item itemtype="Connector" uid="Connector-42" startpinid="Node-31-2" endpinid="Mosfet-22-Sour" pointList="104,-212,104,-232" />
+
+<item itemtype="Connector" uid="Connector-44" startpinid="Mosfet-23-Sour" endpinid="Node-32-0" pointList="216,-232,216,-212" />
+
+<item itemtype="Connector" uid="Connector-45" startpinid="Node-32-2" endpinid="Node-31-1" pointList="216,-212,104,-212" />
+
+<item itemtype="Connector" uid="Connector-46" startpinid="Mosfet-25-Sour" endpinid="Node-33-1" pointList="468,-232,468,-212,360,-212" />
+
+<item itemtype="Connector" uid="Connector-47" startpinid="Mosfet-24-Sour" endpinid="Node-33-0" pointList="360,-232,360,-212" />
+
+<item itemtype="Connector" uid="Connector-67" startpinid="Uno-39-5" endpinid="Mosfet-25-Gate" pointList="364,-104,364,-168,444,-168,444,-248" />
+
+<item itemtype="Connector" uid="Connector-68" startpinid="Uno-39-6" endpinid="Mosfet-24-Gate" pointList="356,-104,356,-172,336,-172,336,-248" />
+
+<item itemtype="Connector" uid="Connector-69" startpinid="Uno-39-9" endpinid="Mosfet-23-Gate" pointList="324,-104,324,-172,192,-172,192,-248" />
+
+<item itemtype="Connector" uid="Connector-70" startpinid="Uno-39-10" endpinid="Mosfet-22-Gate" pointList="316,-104,316,-160,80,-160,80,-248" />
+
+<item itemtype="Connector" uid="Connector-71" startpinid="Uno-39-GND2" endpinid="Node-45-1" pointList="284,-104,284,-212" />
+
+<item itemtype="Connector" uid="Connector-72" startpinid="Node-33-2" endpinid="Node-45-0" pointList="360,-212,284,-212" />
+
+<item itemtype="Connector" uid="Connector-73" startpinid="Node-45-2" endpinid="Node-32-1" pointList="284,-212,216,-212" />
+
+<item itemtype="Connector" uid="Connector-74" startpinid="Voltage Source-34-outPin" endpinid="Uno-39-Vin" pointList="152,76,348,76,348,40" />
+
+<item itemtype="Connector" uid="Connector-75" startpinid="Uno-39-A5" endpinid="Ssd1306-38-PinSck" pointList="404,40,524,40,524,-56" />
+
+<item itemtype="Connector" uid="Connector-76" startpinid="Uno-39-A4" endpinid="Ssd1306-38-PinSda" pointList="396,40,396,60,532,60,532,-56" />
+
+</circuit>
