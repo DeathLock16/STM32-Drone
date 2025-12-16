@@ -2,7 +2,7 @@
 %TF.CreationDate,2025-12-11T09:15:43+01:00*%
 %TF.ProjectId,Drone_PCB,44726f6e-655f-4504-9342-2e6b69636164,rev?*%
 %TF.SameCoordinates,Original*%
-%TF.FileFunction,Legend,Bot*%
+%TF.FileFunction,Paste,Bot*%
 %TF.FilePolarity,Positive*%
 %FSLAX46Y46*%
 G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*

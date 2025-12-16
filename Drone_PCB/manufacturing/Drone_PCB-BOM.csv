@@ -10,7 +10,6 @@
 "D4,D5,D6,D7","4","SS14","","","","Diode_SMD:D_SMA","https://www.vishay.com/docs/88746/ss12.pdf"
 "D8","1","YELLOW_LED","","","","LED_SMD:LED_0603_1608Metric","~"
 "FB1","1","120R","","","","Inductor_SMD:L_0603_1608Metric","~"
-"H1,H2,H3,H4","4","MountingHole","","Wyklucz z BOM","","MountingHole:MountingHole_2.2mm_M2","~"
 "J1","1","Conn_01x04_Pin","","","","Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical","~"
 "J2","1","Conn_01x08_Socket","","","","Connector_PinSocket_2.54mm:PinSocket_1x08_P2.54mm_Vertical","~"
 "J3","1","Conn_01x05_Socket","","","","Connector_PinSocket_2.54mm:PinSocket_1x05_P2.54mm_Vertical","~"
@@ -28,4 +27,4 @@
 "U2","1","AP2112K-3.3","","","","Package_TO_SOT_SMD:SOT-23-5","https://www.diodes.com/assets/Datasheets/AP2112.pdf"
 "U3","1","TP4056-42-ESOP8","","","","Package_SO:SOIC-8-1EP_3.9x4.9mm_P1.27mm_EP2.41x3.3mm_ThermalVias","https://www.lcsc.com/datasheet/lcsc_datasheet_2410121619_TOPPOWER-Nanjing-Extension-Microelectronics-TP4056-42-ESOP8_C16581.pdf"
 "U4","1","DW01A","","","","Package_TO_SOT_SMD:SOT-23-6","https://hmsemi.com/downfile/DW01A.PDF"
-"Y1","1","26MHz","","","","Crystal:Crystal_SMD_HC49-SD","~"
+"Y1","1","26MHz","","","","Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm","~"
