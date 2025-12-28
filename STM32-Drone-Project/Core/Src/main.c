@@ -16,44 +16,59 @@
   ******************************************************************************
   */
 /* USER CODE END Header */
+
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "gpio.h"
+#include "i2c.h"
+#include "usart.h"
 
-/* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "MPU6050.h"
+#include "Madgwick.h"
 
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define DEG2RAD 0.0174532925f
+#define RAD2DEG 57.2957795f
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-
 /* USER CODE BEGIN PV */
+MPU6050_t imu;
+Madgwick_t filter;
 
+uint32_t lastTick;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-/* USER CODE BEGIN PFP */
 
+/* USER CODE BEGIN PFP */
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+/* Redirect printf to USART6 */
+int _write(int file, char *ptr, int len)
+{
+    HAL_UART_Transmit(&huart6, (uint8_t*)ptr, len, HAL_MAX_DELAY);
+    return len;
+}
 
 /* USER CODE END 0 */
 
@@ -63,9 +78,7 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
-
   /* USER CODE BEGIN 1 */
-
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -74,20 +87,58 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  memset(&imu, 0, sizeof(imu));
+  memset(&filter, 0, sizeof(filter));
   /* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_I2C1_Init();
+  MX_USART6_UART_Init();
+
   /* USER CODE BEGIN 2 */
 
+  printf("Boot\r\n");
+
+  if (MPU6050_Init(&hi2c1) != HAL_OK)
+  {
+      printf("MPU6050 init error\r\n");
+      Error_Handler();
+  }
+
+  uint8_t who = 0;
+  if (MPU6050_ReadWhoAmI(&hi2c1, &who) == HAL_OK)
+  {
+      printf("MPU WHO_AM_I = 0x%02X\r\n", who);
+  }
+
+  printf("Calibrating gyro...\r\n");
+  if (MPU6050_CalibrateGyro(&hi2c1, &imu, 1000) != HAL_OK)
+  {
+      printf("Gyro calibration failed\r\n");
+      Error_Handler();
+  }
+  printf("Gyro bias: %.1f %.1f %.1f\r\n",
+         imu.gyro_bias_x,
+         imu.gyro_bias_y,
+         imu.gyro_bias_z);
+
+  Madgwick_Init(&filter, 0.08f);
+
+  /* jawna inicjalizacja quaterniona */
+  filter.q0 = 1.0f;
+  filter.q1 = 0.0f;
+  filter.q2 = 0.0f;
+  filter.q3 = 0.0f;
+
+  HAL_Delay(100);
+  lastTick = HAL_GetTick();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -97,8 +148,66 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+    MPU6050_ReadRaw(&hi2c1, &imu);
+    MPU6050_ComputeScaled(&imu);
+
+    float acc_norm = imu.acc_x * imu.acc_x +
+                     imu.acc_y * imu.acc_y +
+                     imu.acc_z * imu.acc_z;
+
+    if (acc_norm < 0.5f || acc_norm > 1.5f)
+    {
+        HAL_Delay(1);
+        continue;
+    }
+
+    uint32_t now = HAL_GetTick();
+    float dt = (now - lastTick) / 1000.0f;
+    lastTick = now;
+
+    if (dt <= 0.0f || dt > 0.1f)
+    {
+        HAL_Delay(1);
+        continue;
+    }
+
+    Madgwick_UpdateIMU(
+        &filter,
+        imu.gyro_x * DEG2RAD,
+        imu.gyro_y * DEG2RAD,
+        imu.gyro_z * DEG2RAD,
+        imu.acc_x,
+        imu.acc_y,
+        imu.acc_z,
+        dt
+    );
+
+    float roll  = atan2f(
+        2.0f * (filter.q0 * filter.q1 + filter.q2 * filter.q3),
+        1.0f - 2.0f * (filter.q1 * filter.q1 + filter.q2 * filter.q2)
+    ) * RAD2DEG;
+
+    float pitch = asinf(
+        2.0f * (filter.q0 * filter.q2 - filter.q3 * filter.q1)
+    ) * RAD2DEG;
+
+    float yaw   = atan2f(
+        2.0f * (filter.q0 * filter.q3 + filter.q1 * filter.q2),
+        1.0f - 2.0f * (filter.q2 * filter.q2 + filter.q3 * filter.q3)
+    ) * RAD2DEG;
+
+    printf("{\"roll\":%d,\"pitch\":%d,\"yaw\":%d}\r\n",
+           (int)(roll * 100),
+           (int)(pitch * 100),
+           (int)(yaw * 100)
+    );
+
+
+    HAL_Delay(10); /* ~100 Hz */
+
+    /* USER CODE END 3 */
   }
-  /* USER CODE END 3 */
 }
 
 /**
@@ -110,28 +219,20 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Configure the main internal regulator output voltage
-  */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
   }
 
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSE;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
@@ -142,38 +243,20 @@ void SystemClock_Config(void)
   }
 }
 
-/* USER CODE BEGIN 4 */
-
-/* USER CODE END 4 */
-
 /**
   * @brief  This function is executed in case of error occurrence.
   * @retval None
   */
 void Error_Handler(void)
 {
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
   while (1)
   {
   }
-  /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
-/**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
+#ifdef USE_FULL_ASSERT
 void assert_failed(uint8_t *file, uint32_t line)
 {
-  /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  /* USER CODE END 6 */
 }
-#endif /* USE_FULL_ASSERT */
+#endif

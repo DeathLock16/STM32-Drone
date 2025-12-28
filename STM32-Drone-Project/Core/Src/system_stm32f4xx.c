@@ -166,6 +166,14 @@ const uint8_t APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};
   */
 void SystemInit(void)
 {
+    /* HARD RCC RESET */
+    RCC->CR |= RCC_CR_HSION;                 // force HSI ON
+    while (!(RCC->CR & RCC_CR_HSIRDY));      // wait for HSI
+
+    RCC->CR &= ~RCC_CR_HSEON;                // disable HSE
+    RCC->CR &= ~RCC_CR_PLLON;                // disable PLL
+
+    RCC->CFGR = 0x00000000;                  // reset clock config
   /* FPU settings ------------------------------------------------------------*/
   #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
     SCB->CPACR |= ((3UL << 10*2)|(3UL << 11*2));  /* set CP10 and CP11 Full Access */

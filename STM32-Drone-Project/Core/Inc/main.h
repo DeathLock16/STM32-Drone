@@ -57,6 +57,16 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define LED_SIGNAL_Pin GPIO_PIN_9
+#define LED_SIGNAL_GPIO_Port GPIOC
+#define MOTOR_LB_Pin GPIO_PIN_8
+#define MOTOR_LB_GPIO_Port GPIOA
+#define MOTOR_LF_Pin GPIO_PIN_9
+#define MOTOR_LF_GPIO_Port GPIOA
+#define MOTOR_RF_Pin GPIO_PIN_10
+#define MOTOR_RF_GPIO_Port GPIOA
+#define MOTOR_RB_Pin GPIO_PIN_11
+#define MOTOR_RB_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
 

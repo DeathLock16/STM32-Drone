@@ -1,0 +1,6 @@
+../Core/Src/MPU6050.c:3:26:writeReg	1
+../Core/Src/MPU6050.c:18:19:MPU6050_ReadWhoAmI	1
+../Core/Src/MPU6050.c:23:19:MPU6050_Init	5
+../Core/Src/MPU6050.c:53:19:MPU6050_ReadRaw	2
+../Core/Src/MPU6050.c:71:6:MPU6050_ComputeScaled	1
+../Core/Src/MPU6050.c:84:19:MPU6050_CalibrateGyro	3

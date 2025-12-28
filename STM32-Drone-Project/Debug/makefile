@@ -9,6 +9,10 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
+-include Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/subdir.mk
+-include Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/subdir.mk
+-include Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/subdir.mk
+-include Middlewares/Third_Party/FreeRTOS/Source/subdir.mk
 -include Drivers/STM32F4xx_HAL_Driver/Src/subdir.mk
 -include Core/Startup/subdir.mk
 -include Core/Src/subdir.mk
@@ -60,8 +64,8 @@ all: main-build
 main-build: STM32-Drone-Project.elf secondary-outputs
 
 # Tool invocations
-STM32-Drone-Project.elf STM32-Drone-Project.map: $(OBJS) $(USER_OBJS) E:\DeathProject\Praca\ Inżynierska\STM32-Drone\STM32-Drone-Project\STM32F411RCTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "STM32-Drone-Project.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"E:\DeathProject\Praca Inżynierska\STM32-Drone\STM32-Drone-Project\STM32F411RCTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="STM32-Drone-Project.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+STM32-Drone-Project.elf STM32-Drone-Project.map: $(OBJS) $(USER_OBJS) C:\Users\mjank\Documents\GitHub\STM32-Drone\STM32-Drone-Project\STM32F411RCTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "STM32-Drone-Project.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\mjank\Documents\GitHub\STM32-Drone\STM32-Drone-Project\STM32F411RCTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="STM32-Drone-Project.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

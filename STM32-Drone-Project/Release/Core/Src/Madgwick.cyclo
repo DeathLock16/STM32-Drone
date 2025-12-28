@@ -1,0 +1,2 @@
+../Core/Src/Madgwick.c:8:6:Madgwick_Init	1
+../Core/Src/Madgwick.c:17:6:Madgwick_UpdateIMU	4
