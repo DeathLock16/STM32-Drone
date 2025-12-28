@@ -70,6 +70,86 @@ int _write(int file, char *ptr, int len)
     return len;
 }
 
+static void ESP_LeaveSendMode(void) {
+	const char* cmd = "+";
+	HAL_UART_Transmit(&huart6, cmd, strlen(cmd), HAL_MAX_DELAY);
+	HAL_UART_Transmit(&huart6, cmd, strlen(cmd), HAL_MAX_DELAY);
+	HAL_UART_Transmit(&huart6, cmd, strlen(cmd), HAL_MAX_DELAY);
+	HAL_Delay(1000);
+}
+
+static void ESP_Send(const char *cmd, uint32_t delay_ms)
+{
+    HAL_UART_Transmit(&huart6, (uint8_t*)cmd, strlen(cmd), HAL_MAX_DELAY);
+    HAL_UART_Transmit(&huart6, (uint8_t*)"\r\n", 2, HAL_MAX_DELAY);
+    HAL_Delay(delay_ms);
+}
+
+static int ESP_WaitFor(const char *expected, uint32_t timeout_ms)
+{
+    uint32_t t0 = HAL_GetTick();
+    uint16_t idx = 0;
+    char buf[64] = {0};
+    uint8_t c;
+
+    while (HAL_GetTick() - t0 < timeout_ms)
+    {
+        if (HAL_UART_Receive(&huart6, &c, 1, 10) == HAL_OK)
+        {
+            if (idx < sizeof(buf) - 1)
+            {
+                buf[idx++] = (char)c;
+                buf[idx] = 0;
+            }
+
+            if (strstr(buf, expected))
+                return 1;
+        }
+    }
+    return 0;
+}
+
+static void ESP_ConnectWithRetry(void)
+{
+    while (1)
+    {
+        ESP_Send("AT+CIPSTART=\"TCP\",\"192.168.8.100\",3333", 0);
+
+        if (ESP_WaitFor("OK", 3000) ||
+            ESP_WaitFor("ALREADY CONNECTED", 1000))
+        {
+            break; // sukces
+        }
+
+        HAL_GPIO_TogglePin(LED_SIGNAL_GPIO_Port, LED_SIGNAL_Pin);
+        HAL_Delay(500);
+        HAL_GPIO_TogglePin(LED_SIGNAL_GPIO_Port, LED_SIGNAL_Pin);
+        HAL_Delay(500);// 1 sekunda przerwy
+    }
+}
+
+
+void ESP_Init(void)
+{
+	ESP_LeaveSendMode();
+    ESP_Send("AT+RST", 2000);
+    ESP_Send("ATE0", 200);
+
+    ESP_Send("AT+CWMODE=1", 200);
+    ESP_Send("AT+CIPSTA=\"192.168.8.127\",\"192.168.8.1\",\"255.255.255.0\"", 500);
+
+    ESP_Send("AT+CWJAP=\"HUAWEI-7975\",\"40720250\"", 500);
+
+    ESP_Send("AT+CIPMUX=0", 200);
+    ESP_ConnectWithRetry();
+    ESP_Send("AT+CIPMODE=1", 200);
+    ESP_Send("AT+CIPSEND", 200);
+
+    // NO CIPMODE
+    // NO CIPSEND here
+}
+
+
 /* USER CODE END 0 */
 
 /**
@@ -105,6 +185,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   printf("Boot\r\n");
+  ESP_Init();
 
   if (MPU6050_Init(&hi2c1) != HAL_OK)
   {
@@ -204,7 +285,7 @@ int main(void)
     );
 
 
-    HAL_Delay(10); /* ~100 Hz */
+    HAL_Delay(50); /* ~100 Hz */
 
     /* USER CODE END 3 */
   }
