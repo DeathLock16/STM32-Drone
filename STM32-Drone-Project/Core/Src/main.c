@@ -26,7 +26,7 @@
 /* USER CODE BEGIN Includes */
 #include "MPU6050.h"
 #include "Madgwick.h"
-
+#include "protocol.h"
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -144,6 +144,11 @@ void ESP_Init(void)
     ESP_ConnectWithRetry();
     ESP_Send("AT+CIPMODE=1", 200);
     ESP_Send("AT+CIPSEND", 200);
+    uint8_t dump;
+    while (HAL_UART_Receive(&huart6, &dump, 1, 10) == HAL_OK)
+    {
+        // discard
+    }
 
     // NO CIPMODE
     // NO CIPSEND here
@@ -167,8 +172,8 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  memset(&imu, 0, sizeof(imu));
-  memset(&filter, 0, sizeof(filter));
+  //memset(&imu, 0, sizeof(imu));
+  //memset(&filter, 0, sizeof(filter));
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -184,9 +189,9 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
 
-  printf("Boot\r\n");
+  //printf("Boot\r\n");
   ESP_Init();
-
+/*
   if (MPU6050_Init(&hi2c1) != HAL_OK)
   {
       printf("MPU6050 init error\r\n");
@@ -212,7 +217,6 @@ int main(void)
 
   Madgwick_Init(&filter, 0.08f);
 
-  /* jawna inicjalizacja quaterniona */
   filter.q0 = 1.0f;
   filter.q1 = 0.0f;
   filter.q2 = 0.0f;
@@ -220,6 +224,8 @@ int main(void)
 
   HAL_Delay(100);
   lastTick = HAL_GetTick();
+  */
+  Protocol_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -229,63 +235,25 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	    uint8_t b;
 
-    MPU6050_ReadRaw(&hi2c1, &imu);
-    MPU6050_ComputeScaled(&imu);
+	    if (HAL_UART_Receive(&huart6, &b, 1, HAL_MAX_DELAY) == HAL_OK)
+	    {
+	        if (Protocol_PushByte(b))
+	        {
+	            const ProtoFrame_t *rx = Protocol_GetFrame();
+	            ProtoFrame_t tx;
 
-    float acc_norm = imu.acc_x * imu.acc_x +
-                     imu.acc_y * imu.acc_y +
-                     imu.acc_z * imu.acc_z;
+	            if (Protocol_BuildResponse(rx, &tx))
+	            {
+	                HAL_UART_Transmit(&huart6,
+	                                  (uint8_t*)&tx,
+	                                  sizeof(tx),
+	                                  HAL_MAX_DELAY);
+	            }
+	        }
+	    }
 
-    if (acc_norm < 0.5f || acc_norm > 1.5f)
-    {
-        HAL_Delay(1);
-        continue;
-    }
-
-    uint32_t now = HAL_GetTick();
-    float dt = (now - lastTick) / 1000.0f;
-    lastTick = now;
-
-    if (dt <= 0.0f || dt > 0.1f)
-    {
-        HAL_Delay(1);
-        continue;
-    }
-
-    Madgwick_UpdateIMU(
-        &filter,
-        imu.gyro_x * DEG2RAD,
-        imu.gyro_y * DEG2RAD,
-        imu.gyro_z * DEG2RAD,
-        imu.acc_x,
-        imu.acc_y,
-        imu.acc_z,
-        dt
-    );
-
-    float roll  = atan2f(
-        2.0f * (filter.q0 * filter.q1 + filter.q2 * filter.q3),
-        1.0f - 2.0f * (filter.q1 * filter.q1 + filter.q2 * filter.q2)
-    ) * RAD2DEG;
-
-    float pitch = asinf(
-        2.0f * (filter.q0 * filter.q2 - filter.q3 * filter.q1)
-    ) * RAD2DEG;
-
-    float yaw   = atan2f(
-        2.0f * (filter.q0 * filter.q3 + filter.q1 * filter.q2),
-        1.0f - 2.0f * (filter.q2 * filter.q2 + filter.q3 * filter.q3)
-    ) * RAD2DEG;
-
-    printf("{\"roll\":%d,\"pitch\":%d,\"yaw\":%d}\r\n",
-           (int)(roll * 100),
-           (int)(pitch * 100),
-           (int)(yaw * 100)
-    );
-
-
-    HAL_Delay(50); /* ~100 Hz */
 
     /* USER CODE END 3 */
   }

@@ -1,0 +1,4 @@
+../Core/Src/protocol.c:19:6:Protocol_Init	1
+../Core/Src/protocol.c:24:5:Protocol_PushByte	4
+../Core/Src/protocol.c:46:21:Protocol_GetFrame	1
+../Core/Src/protocol.c:51:5:Protocol_BuildResponse	4
