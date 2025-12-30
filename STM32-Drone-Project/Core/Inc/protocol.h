@@ -11,8 +11,18 @@
 #define PWM_MOTOR_COUNT   4
 #define PWM_PAYLOAD_SIZE  (PWM_MOTOR_COUNT * 2)
 
-/* Na razie max payload = PWM (8 bajtów) */
-#define PROTO_MAX_PAYLOAD PWM_PAYLOAD_SIZE
+/* IMU payload = 3x int16 = 6 bajtów */
+typedef struct
+{
+    int16_t roll;
+    int16_t pitch;
+    int16_t yaw;
+} ImuPayload_t;
+
+#define IMU_PAYLOAD_SIZE ((uint8_t)sizeof(ImuPayload_t))
+
+/* ustaw max payload na zapas (żeby kolejne komendy nie wymagały grzebania) */
+#define PROTO_MAX_PAYLOAD 32
 #define PROTO_MAX_FRAME   (6 + PROTO_MAX_PAYLOAD)
 
 /* ====== KIERUNEK ====== */
@@ -24,14 +34,16 @@ typedef enum
 
 typedef enum
 {
-    ST_OK               = 0x00,
+    ST_OK                 = 0x00,
 
-    ST_ERR_BAD_START    = 0x01,
-    ST_ERR_BAD_END      = 0x02,
-    ST_ERR_BAD_CRC      = 0x03,
-    ST_ERR_BAD_DIR      = 0x04,
-    ST_ERR_BAD_LEN      = 0x05,
-    ST_ERR_UNKNOWN_CMD  = 0x06
+    ST_ERR_BAD_START      = 0x01,
+    ST_ERR_BAD_END        = 0x02,
+    ST_ERR_BAD_CRC        = 0x03,
+    ST_ERR_BAD_DIR        = 0x04,
+    ST_ERR_BAD_LEN        = 0x05,
+    ST_ERR_UNKNOWN_CMD    = 0x06,
+
+    ST_ERR_IMU_NOT_READY  = 0x07
 } ProtoStatus_t;
 
 /* ====== KOMENDY ====== */
@@ -46,7 +58,10 @@ typedef enum
     CMD_PWM_SET   = 0x11,
     CMD_PWM_ACK   = 0x91,
 
-    CMD_STATUS    = 0xE0
+    CMD_STATUS    = 0xE0,
+
+    CMD_IMU_READ  = 0x20,
+    CMD_IMU_DATA  = 0xA0
 } ProtoCmd_t;
 
 typedef struct
@@ -65,9 +80,7 @@ typedef enum
     PROTO_ERROR      = 2
 } ProtoResult_t;
 
-/* ====== Struktura zparsowanej ramki ======
-   Uwaga: to NIE jest layout “on-wire”, tylko wygodna struktura po parsowaniu.
-*/
+/* ====== Struktura zparsowanej ramki ====== */
 typedef struct
 {
     uint8_t start;
@@ -85,7 +98,6 @@ ProtoResult_t Protocol_PushByte(uint8_t byte);
 const ProtoRxFrame_t* Protocol_GetFrame(void);
 ProtoStatus_t Protocol_GetLastError(void);
 
-/* Budowanie TX do bufora (zwraca długość TX w bajtach) */
 uint8_t Protocol_BuildFrame(uint8_t dir, uint8_t cmd,
                             const uint8_t *payload, uint8_t len,
                             uint8_t *out, uint8_t out_max);

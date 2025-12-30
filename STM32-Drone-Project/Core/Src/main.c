@@ -54,11 +54,45 @@ MPU6050_t imu;
 Madgwick_t filter;
 
 uint32_t lastTick;
+
+static ImuPayload_t g_imu_last;
+static uint8_t g_imu_ready = 0;
+static uint32_t g_imu_last_update = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+
+#define UART_RX_RING_SIZE 256
+
+static volatile uint8_t  uart_rx_ring[UART_RX_RING_SIZE];
+static volatile uint16_t uart_rx_head = 0;
+static volatile uint16_t uart_rx_tail = 0;
+static uint8_t uart_rx_it_byte;
+
+static void UartRing_Push(uint8_t b)
+{
+    uint16_t next = (uint16_t)((uart_rx_head + 1) % UART_RX_RING_SIZE);
+    if (next != uart_rx_tail)
+    {
+        uart_rx_ring[uart_rx_head] = b;
+        uart_rx_head = next;
+    }
+}
+
+static int UartRing_Pop(uint8_t *out)
+{
+    if (uart_rx_tail == uart_rx_head)
+        return 0;
+
+    *out = uart_rx_ring[uart_rx_tail];
+    uart_rx_tail = (uint16_t)((uart_rx_tail + 1) % UART_RX_RING_SIZE);
+    return 1;
+}
+
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -131,9 +165,9 @@ static void ESP_ConnectWithRetry(void)
             break;
         }
 
-        HAL_GPIO_TogglePin(LED_SIGNAL_GPIO_Port, LED_SIGNAL_Pin);
+        //HAL_GPIO_TogglePin(LED_SIGNAL_GPIO_Port, LED_SIGNAL_Pin);
         HAL_Delay(500);
-        HAL_GPIO_TogglePin(LED_SIGNAL_GPIO_Port, LED_SIGNAL_Pin);
+        //HAL_GPIO_TogglePin(LED_SIGNAL_GPIO_Port, LED_SIGNAL_Pin);
         HAL_Delay(500);
     }
 }
@@ -157,7 +191,7 @@ void ESP_Init(void)
 
     if (!ESP_WaitFor(">", 2000))
     {
-        HAL_GPIO_WritePin(LED_SIGNAL_GPIO_Port, LED_SIGNAL_Pin, GPIO_PIN_SET);
+       // HAL_GPIO_WritePin(LED_SIGNAL_GPIO_Port, LED_SIGNAL_Pin, GPIO_PIN_SET);
         while (1) { }
     }
 
@@ -165,6 +199,169 @@ void ESP_Init(void)
     while (HAL_UART_Receive(&huart6, &dump, 1, 10) == HAL_OK)
     {
     }
+}
+
+static void IMU_Init(void)
+{
+	  if (MPU6050_Init(&hi2c1) != HAL_OK)
+	  {
+	      //printf("MPU6050 init error\r\n");
+	      Error_Handler();
+	  }
+
+	  uint8_t who = 0;
+	  if (MPU6050_ReadWhoAmI(&hi2c1, &who) == HAL_OK)
+	  {
+	      //printf("MPU WHO_AM_I = 0x%02X\r\n", who);
+	  }
+
+	  //printf("Calibrating gyro...\r\n");
+	  if (MPU6050_CalibrateGyro(&hi2c1, &imu, 1000) != HAL_OK)
+	  {
+	      //printf("Gyro calibration failed\r\n");
+	      Error_Handler();
+	  }
+
+	  Madgwick_Init(&filter, 0.08f);
+
+	  /* jawna inicjalizacja quaterniona */
+	  filter.q0 = 1.0f;
+	  filter.q1 = 0.0f;
+	  filter.q2 = 0.0f;
+	  filter.q3 = 0.0f;
+}
+
+static void IMU_UpdateContinuous(void)
+{
+    uint32_t now = HAL_GetTick();
+
+    if ((now - g_imu_last_update) < 10)  // 100 Hz
+        return;
+
+    g_imu_last_update = now;
+
+    MPU6050_ReadRaw(&hi2c1, &imu);
+    MPU6050_ComputeScaled(&imu);
+
+    float acc_norm =
+        imu.acc_x * imu.acc_x +
+        imu.acc_y * imu.acc_y +
+        imu.acc_z * imu.acc_z;
+
+    if (acc_norm < 0.5f || acc_norm > 1.5f)
+        return;
+
+    if (lastTick == 0)
+    {
+        lastTick = now;
+        return;
+    }
+
+    float dt = (now - lastTick) * 0.001f;
+    lastTick = now;
+
+    if (dt <= 0.0f)
+        return;
+
+    if (dt > 0.02f)
+        dt = 0.02f;
+
+    Madgwick_UpdateIMU(
+        &filter,
+        imu.gyro_x * DEG2RAD,
+        imu.gyro_y * DEG2RAD,
+        imu.gyro_z * DEG2RAD,
+        imu.acc_x,
+        imu.acc_y,
+        imu.acc_z,
+        dt
+    );
+
+    float roll  = atan2f(
+        2.0f * (filter.q0 * filter.q1 + filter.q2 * filter.q3),
+        1.0f - 2.0f * (filter.q1 * filter.q1 + filter.q2 * filter.q2)
+    ) * RAD2DEG;
+
+    float pitch = asinf(
+        2.0f * (filter.q0 * filter.q2 - filter.q3 * filter.q1)
+    ) * RAD2DEG;
+
+    float yaw = atan2f(
+        2.0f * (filter.q0 * filter.q3 + filter.q1 * filter.q2),
+        1.0f - 2.0f * (filter.q2 * filter.q2 + filter.q3 * filter.q3)
+    ) * RAD2DEG;
+
+    g_imu_last.roll  = (int16_t)(roll  * 100.0f);
+    g_imu_last.pitch = (int16_t)(pitch * 100.0f);
+    g_imu_last.yaw   = (int16_t)(yaw   * 100.0f);
+
+    g_imu_ready = 1;
+}
+
+
+ImuResult_t IMU_ParseData(ImuAngles_t *out)
+{
+    if (!out)
+        return IMU_ERROR;
+
+    MPU6050_ReadRaw(&hi2c1, &imu);
+    MPU6050_ComputeScaled(&imu);
+
+    float acc_norm =
+        imu.acc_x * imu.acc_x +
+        imu.acc_y * imu.acc_y +
+        imu.acc_z * imu.acc_z;
+
+    if (acc_norm < 0.5f || acc_norm > 1.5f)
+        return IMU_SKIP;
+
+    uint32_t now = HAL_GetTick();
+
+    if (lastTick == 0)
+    {
+        lastTick = now;
+        return IMU_SKIP;
+    }
+
+    float dt = (now - lastTick) * 0.001f;
+    lastTick = now;
+
+    if (dt <= 0.0f)
+        return IMU_SKIP;
+
+    if (dt > 0.02f)
+        dt = 0.02f;
+
+    Madgwick_UpdateIMU(
+        &filter,
+        imu.gyro_x * DEG2RAD,
+        imu.gyro_y * DEG2RAD,
+        imu.gyro_z * DEG2RAD,
+        imu.acc_x,
+        imu.acc_y,
+        imu.acc_z,
+        dt
+    );
+
+    float roll  = atan2f(
+        2.0f * (filter.q0 * filter.q1 + filter.q2 * filter.q3),
+        1.0f - 2.0f * (filter.q1 * filter.q1 + filter.q2 * filter.q2)
+    ) * RAD2DEG;
+
+    float pitch = asinf(
+        2.0f * (filter.q0 * filter.q2 - filter.q3 * filter.q1)
+    ) * RAD2DEG;
+
+    float yaw = atan2f(
+        2.0f * (filter.q0 * filter.q3 + filter.q1 * filter.q2),
+        1.0f - 2.0f * (filter.q2 * filter.q2 + filter.q3 * filter.q3)
+    ) * RAD2DEG;
+
+    out->roll  = (int16_t)(roll  * 100.0f);
+    out->pitch = (int16_t)(pitch * 100.0f);
+    out->yaw   = (int16_t)(yaw   * 100.0f);
+
+    return IMU_OK;
 }
 
 static void PWM_StartAll(void)
@@ -238,8 +435,19 @@ int main(void)
 
   ESP_Init();
 
+  IMU_Init();
+  lastTick = HAL_GetTick();
+  g_imu_last_update = lastTick;
 
   Protocol_Init();
+
+  uart_rx_head = 0;
+  uart_rx_tail = 0;
+
+  HAL_UART_AbortReceive(&huart6);
+  __HAL_UART_CLEAR_OREFLAG(&huart6);
+  HAL_UART_Receive_IT(&huart6, &uart_rx_it_byte, 1);
+
 
   /* USER CODE END 2 */
 
@@ -250,70 +458,79 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	      IMU_UpdateContinuous();
 
-	  uint8_t b;
-
-	      if (HAL_UART_Receive(&huart6, &b, 1, HAL_MAX_DELAY) != HAL_OK)
-	          continue;
-
-	      ProtoResult_t r = Protocol_PushByte(b);
-
-	      if (r == PROTO_OK)
+	      uint8_t b;
+	      while (UartRing_Pop(&b))
 	      {
-	          const ProtoRxFrame_t *rx = Protocol_GetFrame();
+	          ProtoResult_t r = Protocol_PushByte(b);
 
-	          uint8_t tx[32];
-	          uint8_t tx_len = 0;
+	          if (r == PROTO_OK)
+	          {
+	              const ProtoRxFrame_t *rx = Protocol_GetFrame();
 
-	          if (rx->cmd == CMD_PING)
-	          {
-	              tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_PONG, NULL, 0, tx, sizeof(tx));
-	          }
-	          else if (rx->cmd == CMD_PWM_READ)
-	          {
-	              PwmPayload_t pwm;
-	              ReadPwm(&pwm);
+	              uint8_t tx[64];
+	              uint8_t tx_len = 0;
 
-	              tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_PWM_DATA,
-	                                           (const uint8_t*)&pwm, PWM_PAYLOAD_SIZE,
-	                                           tx, sizeof(tx));
-	          }
-	          else if (rx->cmd == CMD_PWM_SET)
-	          {
-	              if (rx->len != PWM_PAYLOAD_SIZE)
+	              if (rx->cmd == CMD_PING)
 	              {
-	                  tx_len = Protocol_BuildStatusFrame(ST_ERR_BAD_LEN, tx, sizeof(tx));
+	                  tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_PONG, NULL, 0, tx, sizeof(tx));
+	              }
+	              else if (rx->cmd == CMD_PWM_READ)
+	              {
+	                  PwmPayload_t pwm;
+	                  ReadPwm(&pwm);
+	                  tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_PWM_DATA,
+	                                               (const uint8_t*)&pwm, PWM_PAYLOAD_SIZE,
+	                                               tx, sizeof(tx));
+	              }
+	              else if (rx->cmd == CMD_PWM_SET)
+	              {
+	                  if (rx->len != PWM_PAYLOAD_SIZE)
+	                  {
+	                      tx_len = Protocol_BuildStatusFrame(ST_ERR_BAD_LEN, tx, sizeof(tx));
+	                  }
+	                  else
+	                  {
+	                      PwmPayload_t pwm;
+	                      memcpy(&pwm, rx->data, PWM_PAYLOAD_SIZE);
+	                      SetPwm(&pwm);
+	                      tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_PWM_ACK, NULL, 0, tx, sizeof(tx));
+	                  }
+	              }
+	              else if (rx->cmd == CMD_IMU_READ)
+	              {
+	                  if (!g_imu_ready)
+	                  {
+	                      tx_len = Protocol_BuildStatusFrame(ST_ERR_IMU_NOT_READY, tx, sizeof(tx));
+	                  }
+	                  else
+	                  {
+	                      ImuPayload_t snap = g_imu_last;
+	                      tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_IMU_DATA,
+	                                                   (const uint8_t*)&snap, IMU_PAYLOAD_SIZE,
+	                                                   tx, sizeof(tx));
+	                  }
 	              }
 	              else
 	              {
-	                  PwmPayload_t pwm;
-	                  memcpy(&pwm, rx->data, PWM_PAYLOAD_SIZE);
-
-	                  SetPwm(&pwm);
-
-	                  tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_PWM_ACK, NULL, 0, tx, sizeof(tx));
+	                  tx_len = Protocol_BuildStatusFrame(ST_ERR_UNKNOWN_CMD, tx, sizeof(tx));
 	              }
-	          }
-	          else
-	          {
-	              tx_len = Protocol_BuildStatusFrame(ST_ERR_UNKNOWN_CMD, tx, sizeof(tx));
-	          }
 
-	          if (tx_len > 0)
+	              if (tx_len > 0)
+	                  HAL_UART_Transmit(&huart6, tx, tx_len, HAL_MAX_DELAY);
+	          }
+	          else if (r == PROTO_ERROR)
 	          {
-	              HAL_UART_Transmit(&huart6, tx, tx_len, HAL_MAX_DELAY);
+	              uint8_t tx[16];
+	              uint8_t tx_len = Protocol_BuildStatusFrame(Protocol_GetLastError(), tx, sizeof(tx));
+	              if (tx_len > 0)
+	                  HAL_UART_Transmit(&huart6, tx, tx_len, HAL_MAX_DELAY);
 	          }
 	      }
-	      else if (r == PROTO_ERROR)
-	      {
-	          uint8_t tx[16];
-	          uint8_t tx_len = Protocol_BuildStatusFrame(Protocol_GetLastError(), tx, sizeof(tx));
 
-	          if (tx_len > 0)
-	          {
-	              HAL_UART_Transmit(&huart6, tx, tx_len, HAL_MAX_DELAY);
-	          }
-	      }
+	      HAL_Delay(1);
+
   }
   /* USER CODE END 3 */
 }
@@ -359,6 +576,28 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (huart == &huart6)
+    {
+        UartRing_Push(uart_rx_it_byte);
+        HAL_UART_Receive_IT(&huart6, &uart_rx_it_byte, 1);
+    }
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+    if (huart == &huart6)
+    {
+        __HAL_UART_CLEAR_OREFLAG(&huart6);
+        __HAL_UART_CLEAR_NEFLAG(&huart6);
+        __HAL_UART_CLEAR_FEFLAG(&huart6);
+        __HAL_UART_CLEAR_PEFLAG(&huart6);
+
+        HAL_UART_AbortReceive(&huart6);
+        HAL_UART_Receive_IT(&huart6, &uart_rx_it_byte, 1);
+    }
+}
 
 /* USER CODE END 4 */
 

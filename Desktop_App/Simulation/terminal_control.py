@@ -20,6 +20,9 @@ CMD_PWM_DATA = 0x90
 CMD_PWM_SET  = 0x11
 CMD_PWM_ACK  = 0x91
 
+CMD_IMU_READ = 0x20
+CMD_IMU_DATA = 0xA0
+
 CMD_STATUS   = 0xE0
 
 STATUS_STR = {
@@ -28,7 +31,8 @@ STATUS_STR = {
     0x03: "BAD_CRC",
     0x04: "BAD_DIR",
     0x05: "BAD_LEN",
-    0x06: "UNKNOWN_CMD"
+    0x06: "UNKNOWN_CMD",
+    0x07: "IMU_NOT_READY"
 }
 
 
@@ -109,8 +113,10 @@ print("""
 3 - PWM SET 100%
 4 - PWM SET 0%
 5 - PWM READ
+6 - IMU READ
 q - quit
 """)
+
 
 while True:
     cmd = input("> ").strip()
@@ -123,12 +129,12 @@ while True:
         print("TX: PING")
 
     elif cmd == "2":
-        pwm = struct.pack("<HHHH", 100, 100, 100, 100)
+        pwm = struct.pack("<HHHH", 500, 500, 500, 500)
         conn.sendall(build_frame(CMD_PWM_SET, pwm))
         print("TX: PWM SET 5%")
 
     elif cmd == "3":
-        pwm = struct.pack("<HHHH", 65535, 65535, 65535, 65535)
+        pwm = struct.pack("<HHHH", 10000, 10000, 10000, 10000)
         conn.sendall(build_frame(CMD_PWM_SET, pwm))
         print("TX: PWM SET 100%")
 
@@ -140,6 +146,10 @@ while True:
     elif cmd == "5":
         conn.sendall(build_frame(CMD_PWM_READ))
         print("TX: PWM READ")
+
+    elif cmd == "6":
+        conn.sendall(build_frame(CMD_IMU_READ))
+        print("TX: IMU READ")
 
     else:
         print("Unknown command")
@@ -168,6 +178,16 @@ while True:
             elif fcmd == CMD_STATUS and len(payload) == 1:
                 err = payload[0]
                 print("RX STATUS:", STATUS_STR.get(err, f"0x{err:02X}"))
+
+            elif fcmd == CMD_IMU_DATA and len(payload) == 6:
+                roll, pitch, yaw = struct.unpack("<hhh", payload)
+                print(
+                    f"RX IMU: "
+                    f"ROLL={roll/100:.2f}° "
+                    f"PITCH={pitch/100:.2f}° "
+                    f"YAW={yaw/100:.2f}°"
+                )
+
 
         time.sleep(0.01)
 

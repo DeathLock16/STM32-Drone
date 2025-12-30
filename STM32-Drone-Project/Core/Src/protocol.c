@@ -31,9 +31,7 @@ ProtoResult_t Protocol_PushByte(uint8_t byte)
     if (rxIndex == 0)
     {
         if (byte != FRAME_START)
-        {
             return PROTO_INCOMPLETE;
-        }
 
         rxBuf[0] = byte;
         rxIndex = 1;
@@ -41,12 +39,19 @@ ProtoResult_t Protocol_PushByte(uint8_t byte)
         return PROTO_INCOMPLETE;
     }
 
+    if (rxIndex >= sizeof(rxBuf))
+    {
+        rxIndex = 0;
+        rxExpected = 0;
+        last_error = ST_ERR_BAD_LEN;
+        return PROTO_ERROR;
+    }
+
     rxBuf[rxIndex++] = byte;
 
     if (rxIndex == 4)
     {
         uint8_t len = rxBuf[3];
-
         if (len > PROTO_MAX_PAYLOAD)
         {
             rxIndex = 0;
@@ -54,7 +59,6 @@ ProtoResult_t Protocol_PushByte(uint8_t byte)
             last_error = ST_ERR_BAD_LEN;
             return PROTO_ERROR;
         }
-
         rxExpected = (uint8_t)(6 + len);
     }
 
@@ -79,16 +83,16 @@ ProtoResult_t Protocol_PushByte(uint8_t byte)
             return PROTO_ERROR;
         }
 
+        if (rxBuf[1] != DIR_PC_TO_STM)
+        {
+            last_error = ST_ERR_BAD_DIR;
+            return PROTO_ERROR;
+        }
+
         uint8_t crc_calc = CalcCrc(rxBuf[1], rxBuf[2], len, &rxBuf[4]);
         if (crc_calc != crc_rx)
         {
             last_error = ST_ERR_BAD_CRC;
-            return PROTO_ERROR;
-        }
-
-        if (rxBuf[1] != DIR_PC_TO_STM)
-        {
-            last_error = ST_ERR_BAD_DIR;
             return PROTO_ERROR;
         }
 
@@ -138,11 +142,10 @@ uint8_t Protocol_BuildFrame(uint8_t dir, uint8_t cmd,
 
     if (len > 0 && payload)
         memcpy(&out[4], payload, len);
+    else if (len > 0)
+        memset(&out[4], 0, len);
 
-    out[4 + len] = CalcCrc(dir, cmd, len, (len > 0 && payload) ? payload : (const uint8_t*)0);
-    if (len > 0 && payload == NULL)
-        out[4 + len] = CalcCrc(dir, cmd, len, &out[4]);
-
+    out[4 + len] = CalcCrc(dir, cmd, len, &out[4]);
     out[5 + len] = FRAME_END;
 
     return total;

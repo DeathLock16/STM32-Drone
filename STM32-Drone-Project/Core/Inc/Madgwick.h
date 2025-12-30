@@ -1,5 +1,6 @@
 #pragma once
 #include <math.h>
+#include <stdint.h>
 
 typedef struct {
     float q0;
@@ -9,6 +10,20 @@ typedef struct {
     float beta;
 } Madgwick_t;
 
+typedef struct
+{
+    int16_t roll;   // *100 deg
+    int16_t pitch;  // *100 deg
+    int16_t yaw;    // *100 deg
+} ImuAngles_t;
+
+typedef enum
+{
+    IMU_OK = 0,
+    IMU_SKIP,
+    IMU_ERROR
+} ImuResult_t;
+
 void Madgwick_Init(Madgwick_t* m, float beta);
 
 void Madgwick_UpdateIMU(
@@ -17,3 +32,4 @@ void Madgwick_UpdateIMU(
     float ax, float ay, float az,
     float dt
 );
+

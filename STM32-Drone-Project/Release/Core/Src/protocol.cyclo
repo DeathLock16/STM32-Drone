@@ -1,6 +1,6 @@
 ../Core/Src/protocol.c:21:6:Protocol_Init	1
-../Core/Src/protocol.c:29:15:Protocol_PushByte	13
-../Core/Src/protocol.c:114:23:Protocol_GetFrame	1
-../Core/Src/protocol.c:119:15:Protocol_GetLastError	1
-../Core/Src/protocol.c:124:9:Protocol_BuildFrame	10
-../Core/Src/protocol.c:151:9:Protocol_BuildStatusFrame	1
+../Core/Src/protocol.c:29:15:Protocol_PushByte	14
+../Core/Src/protocol.c:118:23:Protocol_GetFrame	1
+../Core/Src/protocol.c:123:15:Protocol_GetLastError	1
+../Core/Src/protocol.c:128:9:Protocol_BuildFrame	7
+../Core/Src/protocol.c:154:9:Protocol_BuildStatusFrame	1
