@@ -112,11 +112,13 @@ print("""
 2 - PWM SET 5%
 3 - PWM SET 100%
 4 - PWM SET 0%
-5 - PWM READ
-6 - IMU READ
+5 - PWM SET (custom)
+6 - PWM READ
+7 - IMU READ
 q - quit
 """)
 
+value = 0
 
 while True:
     cmd = input("> ").strip()
@@ -139,15 +141,31 @@ while True:
         print("TX: PWM SET 100%")
 
     elif cmd == "4":
-        pwm = struct.pack("<HHHH", 0, 0, 0, 0)
-        conn.sendall(build_frame(CMD_PWM_SET, pwm))
-        print("TX: PWM SET 0%")
+        while value <= 10000:
+            print(f"TX: PWM SET {value}")
+            pwm = struct.pack("<HHHH", value, value, value, value)
+            conn.sendall(build_frame(CMD_PWM_SET, pwm))
+            value += 100
+            time.sleep(0.1)
 
     elif cmd == "5":
+        s = input("Podaj wartość PWM (0..10000): ").strip()
+        try:
+            val = int(s)
+        except ValueError:
+            print("Nieprawidłowa liczba")
+            continue
+
+        val = max(0, min(10000, val))
+        pwm = struct.pack("<HHHH", val, val, val, val)
+        conn.sendall(build_frame(CMD_PWM_SET, pwm))
+        print(f"TX: PWM SET custom = {val}")
+
+    elif cmd == "6":
         conn.sendall(build_frame(CMD_PWM_READ))
         print("TX: PWM READ")
 
-    elif cmd == "6":
+    elif cmd == "7":
         conn.sendall(build_frame(CMD_IMU_READ))
         print("TX: IMU READ")
 
@@ -187,7 +205,6 @@ while True:
                     f"PITCH={pitch/100:.2f}° "
                     f"YAW={yaw/100:.2f}°"
                 )
-
 
         time.sleep(0.01)
 
