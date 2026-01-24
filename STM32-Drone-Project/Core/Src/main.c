@@ -574,10 +574,9 @@ int main(void)
   {
       IMU_UpdateContinuous();
 
-      if (g_tilt_kill)
+      if (!g_armed || g_tilt_kill)
           PWM_SetSafe();
-
-      if (g_ctrl_mode == CTRL_STAB)
+      else if (g_ctrl_mode == CTRL_STAB)
     	  ControlStep_Stabilize();
 
       uint8_t b;
