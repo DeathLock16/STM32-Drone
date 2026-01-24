@@ -68,8 +68,12 @@ typedef enum
 
 	CMD_STAB_SET  = 0x12,
 	CMD_STAB_ACK  = 0x92,
+
 	CMD_STAB_OFF  = 0x13,
 	CMD_STAB_OFF_ACK = 0x93,
+
+	CMD_NAV_SET   = 0x14,
+	CMD_NAV_ACK	  = 0x94,
 
     CMD_STATUS    = 0xE0,
 
@@ -104,6 +108,25 @@ typedef struct
     uint8_t crc;
     uint8_t end;
 } ProtoRxFrame_t;
+
+typedef enum
+{
+    NAV_STOP = 0,
+    NAV_FORWARD = 1,
+    NAV_RIGHT = 2,
+    NAV_BACK = 3,
+    NAV_LEFT = 4,
+    NAV_YAW_RIGHT = 5,
+    NAV_YAW_LEFT = 6
+} NavAction_t;
+
+typedef struct
+{
+    uint16_t base_pwm;   // 0..10000
+    uint8_t  action;     // NavAction_t
+} NavPayload_t;
+
+#define NAV_PAYLOAD_SIZE ((uint8_t)sizeof(NavPayload_t))
 
 /* ====== API ====== */
 void Protocol_Init(void);

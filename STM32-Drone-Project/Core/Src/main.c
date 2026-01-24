@@ -68,6 +68,14 @@
 
 #define STAB_ROLL_SIGN 1.0f
 #define STAB_PITCH_SIGN 1.0f
+
+#define NAV_TILT_DEG        8.0f
+#define NAV_YAW_RATE_DPS   60.0f
+
+#define STAB_KP_YAW_RATE    2.5f
+#define STAB_YAW_SIGN       1.0f
+#define STAB_YAW_MAX        1200.0f
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -114,6 +122,13 @@ static volatile float g_gyro_yaw_dps = 0.0f;
 static volatile uint8_t g_att_valid = 0;
 
 static volatile uint8_t g_armed = 0;
+
+static volatile float g_gyro_yaw_dps = 0.0f;
+
+static volatile float g_cmd_roll_deg = 0.0f;
+static volatile float g_cmd_pitch_deg = 0.0f;
+static volatile float g_cmd_yaw_rate_dps = 0.0f;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -431,10 +446,10 @@ static void IMU_UpdateContinuous(void)
 
     g_roll_deg = roll;
     g_pitch_deg = pitch;
-    g_gyro_yaw_dps = imu.gyro_z;
 
     g_gyro_roll_dps = imu.gyro_x;
     g_gyro_pitch_dps = imu.gyro_y;
+    g_gyro_yaw_dps = imu.gyro_z;
 
     g_att_valid = 1;
 
@@ -513,23 +528,26 @@ static void ControlStep_Stabilize(void)
     if (!g_att_valid)
         return;
 
-    float roll  = (float)g_roll_deg * STAB_ROLL_SIGN;
-    float pitch = (float)g_pitch_deg * STAB_PITCH_SIGN;
+    float roll_meas  = (float)g_roll_deg  * STAB_ROLL_SIGN;
+    float pitch_meas = (float)g_pitch_deg * STAB_PITCH_SIGN;
 
-    float roll_rate  = (float)g_gyro_roll_dps * STAB_ROLL_SIGN;
+    float roll_rate  = (float)g_gyro_roll_dps  * STAB_ROLL_SIGN;
     float pitch_rate = (float)g_gyro_pitch_dps * STAB_PITCH_SIGN;
 
-    float err_roll  = -roll;
-    float err_pitch = -pitch;
+    float roll_cmd  = (float)g_cmd_roll_deg;
+    float pitch_cmd = (float)g_cmd_pitch_deg;
 
-    float d_roll  = -roll_rate;
-    float d_pitch = -pitch_rate;
+    float err_roll  = roll_cmd  - roll_meas;
+    float err_pitch = pitch_cmd - pitch_meas;
 
-    float u_roll  = STAB_KP_ROLL  * err_roll  + STAB_KD_ROLL  * d_roll;
-    float u_pitch = STAB_KP_PITCH * err_pitch + STAB_KD_PITCH * d_pitch;
+    float u_roll  = STAB_KP_ROLL  * err_roll  - STAB_KD_ROLL  * roll_rate;
+    float u_pitch = STAB_KP_PITCH * err_pitch - STAB_KD_PITCH * pitch_rate;
 
     float yaw_rate = (float)g_gyro_yaw_dps * STAB_YAW_SIGN;
-    float u_yaw = STAB_KP_YAW_RATE * yaw_rate;
+    float yaw_cmd  = (float)g_cmd_yaw_rate_dps * STAB_YAW_SIGN;
+
+    float yaw_rate_err = yaw_rate - yaw_cmd;
+    float u_yaw = STAB_KP_YAW_RATE * yaw_rate_err;
 
     if (u_yaw > STAB_YAW_MAX) u_yaw = STAB_YAW_MAX;
     if (u_yaw < -STAB_YAW_MAX) u_yaw = -STAB_YAW_MAX;
@@ -538,10 +556,11 @@ static void ControlStep_Stabilize(void)
 
     PwmPayload_t out;
 
-    int32_t lf = base + (int32_t)lroundf(u_pitch + u_roll - u_yaw);
-    int32_t rf = base + (int32_t)lroundf(u_pitch - u_roll + u_yaw);
-    int32_t lb = base + (int32_t)lroundf(-u_pitch + u_roll + u_yaw);
-    int32_t rb = base + (int32_t)lroundf(-u_pitch - u_roll - u_yaw);
+    // U Ciebie: CW = LF + RB, CCW = RF + LB
+    int32_t lf = base + (int32_t)lroundf(u_pitch + u_roll - u_yaw); // LF (CW)
+    int32_t rf = base + (int32_t)lroundf(u_pitch - u_roll + u_yaw); // RF (CCW)
+    int32_t lb = base + (int32_t)lroundf(-u_pitch + u_roll + u_yaw); // LB (CCW)
+    int32_t rb = base + (int32_t)lroundf(-u_pitch - u_roll - u_yaw); // RB (CW)
 
     out.motor_lf = clamp_u16(lf, PWM_MIN, PWM_MAX);
     out.motor_rf = clamp_u16(rf, PWM_MIN, PWM_MAX);
@@ -627,6 +646,11 @@ int main(void)
                       PwmPayload_t pwm;
                       memcpy(&pwm, rx->data, PWM_PAYLOAD_SIZE);
                       g_ctrl_mode = CTRL_MANUAL;
+
+                      g_cmd_roll_deg = 0.0f;
+                      g_cmd_pitch_deg = 0.0f;
+                      g_cmd_yaw_rate_dps = 0.0f;
+
                       SetPwm(&pwm);
                       tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_PWM_ACK, NULL, 0, tx, sizeof(tx));
                   }
@@ -672,6 +696,64 @@ int main(void)
                   g_ctrl_mode = CTRL_MANUAL;
                   PWM_SetSafe();
                   tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_STAB_OFF_ACK, NULL, 0, tx, sizeof(tx));
+              }
+              else if (rx->cmd == CMD_NAV_SET)
+              {
+                  if (rx->len != NAV_PAYLOAD_SIZE)
+                      tx_len = Protocol_BuildStatusFrame(ST_ERR_BAD_LEN, tx, sizeof(tx));
+
+                  else
+                  {
+                      NavPayload_t np;
+                      memcpy(&np, rx->data, NAV_PAYLOAD_SIZE);
+
+                      if (np.base_pwm > PWM_MAX) np.base_pwm = PWM_MAX;
+
+                      g_stab_base_pwm = np.base_pwm;
+                      g_ctrl_mode = CTRL_STAB;
+                      g_armed = 1;
+
+                      g_cmd_roll_deg = 0.0f;
+                      g_cmd_pitch_deg = 0.0f;
+                      g_cmd_yaw_rate_dps = 0.0f;
+
+                      switch ((uint8_t)np.action)
+                      {
+                          case NAV_STOP:
+                              break;
+
+                          case NAV_FORWARD:
+                              g_cmd_pitch_deg = -NAV_TILT_DEG;
+                              break;
+
+                          case NAV_BACK:
+                              g_cmd_pitch_deg = +NAV_TILT_DEG;
+                              break;
+
+                          case NAV_LEFT:
+                              g_cmd_roll_deg = -NAV_TILT_DEG;
+                              break;
+
+                          case NAV_RIGHT:
+                              g_cmd_roll_deg = +NAV_TILT_DEG;
+                              break;
+
+                          case NAV_YAW_LEFT:
+                              g_cmd_yaw_rate_dps = -NAV_YAW_RATE_DPS;
+                              break;
+
+                          case NAV_YAW_RIGHT:
+                              g_cmd_yaw_rate_dps = +NAV_YAW_RATE_DPS;
+                              break;
+
+                          default:
+                              break;
+                      }
+
+                      tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_NAV_ACK,
+                                                   (const uint8_t*)&np, NAV_PAYLOAD_SIZE,
+                                                   tx, sizeof(tx));
+                  }
               }
               else
               {
