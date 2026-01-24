@@ -107,6 +107,8 @@ static volatile float g_pitch_deg = 0.0f;
 static volatile float g_gyro_roll_dps = 0.0f;
 static volatile float g_gyro_pitch_dps = 0.0f;
 static volatile uint8_t g_att_valid = 0;
+
+static volatile uint8_t g_armed = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -338,6 +340,8 @@ static void ReadPwm(PwmPayload_t *p)
 static void SetPwm(const PwmPayload_t *p)
 {
     /* always remember last command */
+	if (!g_armed) g_armed = 1;
+
     g_last_pwm_cmd = *p;
     g_have_pwm_cmd = 1;
 
@@ -573,7 +577,7 @@ int main(void)
       if (g_tilt_kill)
           PWM_SetSafe();
 
-      if (g_ctrl_mode = CTRL_STAB)
+      if (g_ctrl_mode == CTRL_STAB)
     	  ControlStep_Stabilize();
 
       uint8_t b;
@@ -644,6 +648,7 @@ int main(void)
 
                       g_stab_base_pwm = sp.base_pwm;
                       g_ctrl_mode = CTRL_STAB;
+                      g_armed = 1;
 
                       tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_STAB_ACK,
                                                    (const uint8_t*)&sp, STAB_PAYLOAD_SIZE,

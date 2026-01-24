@@ -109,6 +109,10 @@ print("Waiting for ESP...")
 conn, addr = srv.accept()
 print("Connected from:", addr)
 
+pwm = struct.pack("<HHHH", 0, 0, 0, 0)
+conn.sendall(build_frame(CMD_PWM_SET, pwm))
+print("TX: PWM SET 0% (SAFE on connect)")
+
 conn.settimeout(0.1)
 rx_buf = b""
 
