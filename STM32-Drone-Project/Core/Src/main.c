@@ -48,8 +48,8 @@
 #define ACC_G_MIN          0.80f
 #define ACC_G_MAX          1.20f
 
-#define TILT_KILL_DEG      45.0f
-#define TILT_UNKILL_DEG    35.0f
+#define TILT_KILL_DEG      35.0f
+#define TILT_UNKILL_DEG    25.0f
 
 #define TILT_KILL_DEBOUNCE_MS   50u   /* musi trwać >45° przez 50 ms */
 #define TILT_UNKILL_HOLD_MS    300u   /* musi być <35° przez 300 ms żeby odblokować */
@@ -61,6 +61,10 @@
 #define STAB_KD_ROLL 2.0f
 #define STAB_KP_PITCH 25.0f
 #define STAB_KD_PITCH 2.0f
+
+#define STAB_KP_YAW_RATE 2.0f
+#define STAB_YAW_SIGN 1.0f
+#define STAB_YAW_MAX 1200.0f
 
 #define STAB_ROLL_SIGN 1.0f
 #define STAB_PITCH_SIGN 1.0f
@@ -106,6 +110,7 @@ static volatile float g_roll_deg = 0.0f;
 static volatile float g_pitch_deg = 0.0f;
 static volatile float g_gyro_roll_dps = 0.0f;
 static volatile float g_gyro_pitch_dps = 0.0f;
+static volatile float g_gyro_yaw_dps = 0.0f;
 static volatile uint8_t g_att_valid = 0;
 
 static volatile uint8_t g_armed = 0;
@@ -426,6 +431,7 @@ static void IMU_UpdateContinuous(void)
 
     g_roll_deg = roll;
     g_pitch_deg = pitch;
+    g_gyro_yaw_dps = imu.gyro_z;
 
     g_gyro_roll_dps = imu.gyro_x;
     g_gyro_pitch_dps = imu.gyro_y;
@@ -449,6 +455,7 @@ static void IMU_UpdateContinuous(void)
                 g_tilt_unkill_since = 0;
                 HAL_GPIO_WritePin(LED_SIGNAL_GPIO_Port, LED_SIGNAL_Pin, 1);
                 PWM_SetSafe();
+                g_ctrl_mode = CTRL_MANUAL;
             }
         }
         else
@@ -521,14 +528,20 @@ static void ControlStep_Stabilize(void)
     float u_roll  = STAB_KP_ROLL  * err_roll  + STAB_KD_ROLL  * d_roll;
     float u_pitch = STAB_KP_PITCH * err_pitch + STAB_KD_PITCH * d_pitch;
 
+    float yaw_rate = (float)g_gyro_yaw_dps * STAB_YAW_SIGN;
+    float u_yaw = STAB_KP_YAW_RATE * yaw_rate;
+
+    if (u_yaw > STAB_YAW_MAX) u_yaw = STAB_YAW_MAX;
+    if (u_yaw < -STAB_YAW_MAX) u_yaw = -STAB_YAW_MAX;
+
     int32_t base = (int32_t)g_stab_base_pwm;
 
     PwmPayload_t out;
 
-    int32_t lf = base + (int32_t)lroundf(u_pitch + u_roll);
-    int32_t rf = base + (int32_t)lroundf(u_pitch - u_roll);
-    int32_t lb = base + (int32_t)lroundf(-u_pitch + u_roll);
-    int32_t rb = base + (int32_t)lroundf(-u_pitch - u_roll);
+    int32_t lf = base + (int32_t)lroundf(u_pitch + u_roll - u_yaw);
+    int32_t rf = base + (int32_t)lroundf(u_pitch - u_roll + u_yaw);
+    int32_t lb = base + (int32_t)lroundf(-u_pitch + u_roll + u_yaw);
+    int32_t rb = base + (int32_t)lroundf(-u_pitch - u_roll - u_yaw);
 
     out.motor_lf = clamp_u16(lf, PWM_MIN, PWM_MAX);
     out.motor_rf = clamp_u16(rf, PWM_MIN, PWM_MAX);
