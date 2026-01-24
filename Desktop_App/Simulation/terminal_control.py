@@ -20,6 +20,11 @@ CMD_PWM_DATA = 0x90
 CMD_PWM_SET  = 0x11
 CMD_PWM_ACK  = 0x91
 
+CMD_STAB_SET = 0x12
+CMD_STAB_ACK = 0x92
+CMD_STAB_OFF = 0x13
+CMD_STAB_OFF_ACK = 0x93
+
 CMD_IMU_READ = 0x20
 CMD_IMU_DATA = 0xA0
 
@@ -115,6 +120,8 @@ print("""
 5 - PWM SET (custom)
 6 - PWM READ
 7 - IMU READ
+8 - STAB ON (custom)
+9 - STAB OFF
 q - quit
 """)
 
@@ -169,6 +176,22 @@ while True:
         conn.sendall(build_frame(CMD_IMU_READ))
         print("TX: IMU READ")
 
+    elif cmd == "8":
+        s = input("Podaj base PWM (0..10000): ").strip()
+        try:
+            base = int(s)
+        except ValueError:
+            print("Nieprawidłowa liczba")
+            continue
+        base = max(0, min(10000, base))
+        payload = struct.pack("<H", base)
+        conn.sendall(build_frame(CMD_STAB_SET, payload))
+        print(f"TX: STAB SET base={base}")
+
+    elif cmd == "9":
+        conn.sendall(build_frame(CMD_STAB_OFF))
+        print("TX: STAB OFF")
+
     else:
         print("Unknown command")
         continue
@@ -205,6 +228,19 @@ while True:
                     f"PITCH={pitch/100:.2f}° "
                     f"YAW={yaw/100:.2f}°"
                 )
+
+            elif fcmd == CMD_STAB_ACK:
+                if len(payload) == 0:
+                    print("RX: STAB ACK ✓")
+                elif len(payload) == 2:
+                    (base,) = struct.unpack("<H", payload)
+                    print(f"RX: STAB ACK ✓ base={base}")
+                else:
+                    print("RX: STAB ACK ✓")
+
+            elif fcmd == CMD_STAB_OFF_ACK:
+                print("RX: STAB OFF ACK ✓")
+
 
         time.sleep(0.01)
 

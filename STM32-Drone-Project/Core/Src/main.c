@@ -53,6 +53,17 @@
 
 #define TILT_KILL_DEBOUNCE_MS   50u   /* musi trwać >45° przez 50 ms */
 #define TILT_UNKILL_HOLD_MS    300u   /* musi być <35° przez 300 ms żeby odblokować */
+
+#define PWM_MIN 0
+#define PWM_MAX 10000
+
+#define STAB_KP_ROLL 25.0f
+#define STAB_KD_ROLL 2.0f
+#define STAB_KP_PITCH 25.0f
+#define STAB_KD_PITCH 2.0f
+
+#define STAB_ROLL_SIGN 1.0f
+#define STAB_PITCH_SIGN 1.0f
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -82,6 +93,20 @@ static float ax_f = 0.0f, ay_f = 0.0f, az_f = 1.0f;
 /* track last pwm command (for debug / potential safety extensions) */
 static PwmPayload_t g_last_pwm_cmd;
 static uint8_t g_have_pwm_cmd = 0;
+
+typedef enum {
+	CTRL_MANUAL,
+	CTRL_STAB
+} ControlMode_t;
+
+static volatile ControlMode_t g_ctrl_mode = CTRL_MANUAL;
+static volatile uint16_t g_stab_base_pwm = 0;
+
+static volatile float g_roll_deg = 0.0f;
+static volatile float g_pitch_deg = 0.0f;
+static volatile float g_gyro_roll_dps = 0.0f;
+static volatile float g_gyro_pitch_dps = 0.0f;
+static volatile uint8_t g_att_valid = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -136,6 +161,12 @@ static inline int accel_norm_ok(float ax, float ay, float az, float g_min, float
 {
     float n = sqrtf(ax*ax + ay*ay + az*az);
     return (n >= g_min && n <= g_max) ? 1 : 0;
+}
+
+static inline uint16_t clamp_u16(int32_t v, int32_t lo, int32_t hi) {
+	if (v < lo) return (uint16_t)lo;
+	if (v > hi) return (uint16_t)hi;
+	return (uint16_t)v;
 }
 
 /* USER CODE END PFP */
@@ -389,6 +420,14 @@ static void IMU_UpdateContinuous(void)
     g_imu_last.pitch = (int16_t)(pitch * 100.0f);
     g_imu_last.yaw   = (int16_t)(yaw   * 100.0f);
 
+    g_roll_deg = roll;
+    g_pitch_deg = pitch;
+
+    g_gyro_roll_dps = imu.gyro_x;
+    g_gyro_pitch_dps = imu.gyro_y;
+
+    g_att_valid = 1;
+
     /* ---- Tilt kill with debounce + hysteresis ---- */
     float aroll = fabsf(roll);
     float apitch = fabsf(pitch);
@@ -452,6 +491,49 @@ ImuResult_t IMU_ParseData(ImuAngles_t *out)
     return IMU_OK;
 }
 
+static void ControlStep_Stabilize(void)
+{
+    if (g_tilt_kill)
+    {
+        PWM_SetSafe();
+        return;
+    }
+
+    if (!g_att_valid)
+        return;
+
+    float roll  = (float)g_roll_deg * STAB_ROLL_SIGN;
+    float pitch = (float)g_pitch_deg * STAB_PITCH_SIGN;
+
+    float roll_rate  = (float)g_gyro_roll_dps * STAB_ROLL_SIGN;
+    float pitch_rate = (float)g_gyro_pitch_dps * STAB_PITCH_SIGN;
+
+    float err_roll  = -roll;
+    float err_pitch = -pitch;
+
+    float d_roll  = -roll_rate;
+    float d_pitch = -pitch_rate;
+
+    float u_roll  = STAB_KP_ROLL  * err_roll  + STAB_KD_ROLL  * d_roll;
+    float u_pitch = STAB_KP_PITCH * err_pitch + STAB_KD_PITCH * d_pitch;
+
+    int32_t base = (int32_t)g_stab_base_pwm;
+
+    PwmPayload_t out;
+
+    int32_t lf = base + (int32_t)lroundf(u_pitch + u_roll);
+    int32_t rf = base + (int32_t)lroundf(u_pitch - u_roll);
+    int32_t lb = base + (int32_t)lroundf(-u_pitch + u_roll);
+    int32_t rb = base + (int32_t)lroundf(-u_pitch - u_roll);
+
+    out.motor_lf = clamp_u16(lf, PWM_MIN, PWM_MAX);
+    out.motor_rf = clamp_u16(rf, PWM_MIN, PWM_MAX);
+    out.motor_lb = clamp_u16(lb, PWM_MIN, PWM_MAX);
+    out.motor_rb = clamp_u16(rb, PWM_MIN, PWM_MAX);
+
+    SetPwm(&out);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -491,6 +573,9 @@ int main(void)
       if (g_tilt_kill)
           PWM_SetSafe();
 
+      if (g_ctrl_mode = CTRL_STAB)
+    	  ControlStep_Stabilize();
+
       uint8_t b;
       while (UartRing_Pop(&b))
       {
@@ -525,6 +610,7 @@ int main(void)
                   {
                       PwmPayload_t pwm;
                       memcpy(&pwm, rx->data, PWM_PAYLOAD_SIZE);
+                      g_ctrl_mode = CTRL_MANUAL;
                       SetPwm(&pwm);
                       tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_PWM_ACK, NULL, 0, tx, sizeof(tx));
                   }
@@ -542,6 +628,33 @@ int main(void)
                                                    (const uint8_t*)&snap, IMU_PAYLOAD_SIZE,
                                                    tx, sizeof(tx));
                   }
+              }
+              else if (rx->cmd == CMD_STAB_SET)
+              {
+                  if (rx->len != STAB_PAYLOAD_SIZE)
+                  {
+                      tx_len = Protocol_BuildStatusFrame(ST_ERR_BAD_LEN, tx, sizeof(tx));
+                  }
+                  else
+                  {
+                      StabPayload_t sp;
+                      memcpy(&sp, rx->data, STAB_PAYLOAD_SIZE);
+
+                      if (sp.base_pwm > PWM_MAX) sp.base_pwm = PWM_MAX;
+
+                      g_stab_base_pwm = sp.base_pwm;
+                      g_ctrl_mode = CTRL_STAB;
+
+                      tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_STAB_ACK,
+                                                   (const uint8_t*)&sp, STAB_PAYLOAD_SIZE,
+                                                   tx, sizeof(tx));
+                  }
+              }
+              else if (rx->cmd == CMD_STAB_OFF)
+              {
+                  g_ctrl_mode = CTRL_MANUAL;
+                  PWM_SetSafe();
+                  tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_STAB_OFF_ACK, NULL, 0, tx, sizeof(tx));
               }
               else
               {

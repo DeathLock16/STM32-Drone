@@ -21,6 +21,14 @@ typedef struct
 
 #define IMU_PAYLOAD_SIZE ((uint8_t)sizeof(ImuPayload_t))
 
+/* Stab payload */
+typedef struct
+{
+	uint16_t base_pwm;
+} StabPayload_t;
+
+#define STAB_PAYLOAD_SIZE ((uint8_t)sizeof(StabPayload_t))
+
 /* ustaw max payload na zapas (żeby kolejne komendy nie wymagały grzebania) */
 #define PROTO_MAX_PAYLOAD 32
 #define PROTO_MAX_FRAME   (6 + PROTO_MAX_PAYLOAD)
@@ -57,6 +65,11 @@ typedef enum
 
     CMD_PWM_SET   = 0x11,
     CMD_PWM_ACK   = 0x91,
+
+	CMD_STAB_SET  = 0x12,
+	CMD_STAB_ACK  = 0x92,
+	CMD_STAB_OFF  = 0x13,
+	CMD_STAB_OFF_ACK = 0x93,
 
     CMD_STATUS    = 0xE0,
 
