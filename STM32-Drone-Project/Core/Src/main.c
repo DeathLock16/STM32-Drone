@@ -123,8 +123,6 @@ static volatile uint8_t g_att_valid = 0;
 
 static volatile uint8_t g_armed = 0;
 
-static volatile float g_gyro_yaw_dps = 0.0f;
-
 static volatile float g_cmd_roll_deg = 0.0f;
 static volatile float g_cmd_pitch_deg = 0.0f;
 static volatile float g_cmd_yaw_rate_dps = 0.0f;
