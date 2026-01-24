@@ -1,3 +1,4 @@
+"./Core/Src/IMUAccelFilter.o"
 "./Core/Src/MPU6050.o"
 "./Core/Src/Madgwick.o"
 "./Core/Src/gpio.o"

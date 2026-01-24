@@ -41,6 +41,18 @@
 /* USER CODE BEGIN PD */
 #define DEG2RAD 0.0174532925f
 #define RAD2DEG 57.2957795f
+
+#define IMU_UPDATE_PERIOD_MS 10u   /* 100 Hz */
+
+#define ACC_LPF_CUTOFF_HZ  20.0f   /* 15–25 Hz: startowo 20 Hz */
+#define ACC_G_MIN          0.80f
+#define ACC_G_MAX          1.20f
+
+#define TILT_KILL_DEG      45.0f
+#define TILT_UNKILL_DEG    35.0f
+
+#define TILT_KILL_DEBOUNCE_MS   50u   /* musi trwać >45° przez 50 ms */
+#define TILT_UNKILL_HOLD_MS    300u   /* musi być <35° przez 300 ms żeby odblokować */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -53,12 +65,23 @@
 MPU6050_t imu;
 Madgwick_t filter;
 
-uint32_t lastTick;
+static uint32_t lastTick = 0;
 
 static ImuPayload_t g_imu_last;
 static uint8_t g_imu_ready = 0;
 static uint32_t g_imu_last_update = 0;
 
+/* tilt-kill */
+static volatile uint8_t g_tilt_kill = 0;
+static uint32_t g_tilt_kill_since = 0;
+static uint32_t g_tilt_unkill_since = 0;
+
+/* ACC LPF state */
+static float ax_f = 0.0f, ay_f = 0.0f, az_f = 1.0f;
+
+/* track last pwm command (for debug / potential safety extensions) */
+static PwmPayload_t g_last_pwm_cmd;
+static uint8_t g_have_pwm_cmd = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -92,6 +115,28 @@ static int UartRing_Pop(uint8_t *out)
     return 1;
 }
 
+/* --- ACC LPF helpers --- */
+static inline float lpf_alpha(float dt, float cutoff_hz)
+{
+    const float RC = 1.0f / (2.0f * 3.1415926535f * cutoff_hz);
+    return dt / (dt + RC);
+}
+
+static inline void lpf3(float dt, float cutoff_hz,
+                        float ax, float ay, float az,
+                        float *ox, float *oy, float *oz)
+{
+    float a = lpf_alpha(dt, cutoff_hz);
+    *ox += a * (ax - *ox);
+    *oy += a * (ay - *oy);
+    *oz += a * (az - *oz);
+}
+
+static inline int accel_norm_ok(float ax, float ay, float az, float g_min, float g_max)
+{
+    float n = sqrtf(ax*ax + ay*ay + az*az);
+    return (n >= g_min && n <= g_max) ? 1 : 0;
+}
 
 /* USER CODE END PFP */
 
@@ -165,9 +210,7 @@ static void ESP_ConnectWithRetry(void)
             break;
         }
 
-        //HAL_GPIO_TogglePin(LED_SIGNAL_GPIO_Port, LED_SIGNAL_Pin);
         HAL_Delay(500);
-        //HAL_GPIO_TogglePin(LED_SIGNAL_GPIO_Port, LED_SIGNAL_Pin);
         HAL_Delay(500);
     }
 }
@@ -191,7 +234,6 @@ void ESP_Init(void)
 
     if (!ESP_WaitFor(">", 2000))
     {
-       // HAL_GPIO_WritePin(LED_SIGNAL_GPIO_Port, LED_SIGNAL_Pin, GPIO_PIN_SET);
         while (1) { }
     }
 
@@ -203,53 +245,95 @@ void ESP_Init(void)
 
 static void IMU_Init(void)
 {
-	  if (MPU6050_Init(&hi2c1) != HAL_OK)
-	  {
-	      //printf("MPU6050 init error\r\n");
-	      Error_Handler();
-	  }
+    if (MPU6050_Init(&hi2c1) != HAL_OK)
+    {
+        Error_Handler();
+    }
 
-	  uint8_t who = 0;
-	  if (MPU6050_ReadWhoAmI(&hi2c1, &who) == HAL_OK)
-	  {
-	      //printf("MPU WHO_AM_I = 0x%02X\r\n", who);
-	  }
+    uint8_t who = 0;
+    (void)MPU6050_ReadWhoAmI(&hi2c1, &who);
 
-	  //printf("Calibrating gyro...\r\n");
-	  if (MPU6050_CalibrateGyro(&hi2c1, &imu, 1000) != HAL_OK)
-	  {
-	      //printf("Gyro calibration failed\r\n");
-	      Error_Handler();
-	  }
+    if (MPU6050_CalibrateGyro(&hi2c1, &imu, 1000) != HAL_OK)
+    {
+        Error_Handler();
+    }
 
-	  Madgwick_Init(&filter, 0.08f);
+    Madgwick_Init(&filter, 0.05f);
 
-	  /* jawna inicjalizacja quaterniona */
-	  filter.q0 = 1.0f;
-	  filter.q1 = 0.0f;
-	  filter.q2 = 0.0f;
-	  filter.q3 = 0.0f;
+    filter.q0 = 1.0f;
+    filter.q1 = 0.0f;
+    filter.q2 = 0.0f;
+    filter.q3 = 0.0f;
+
+    /* reset LPF state */
+    ax_f = 0.0f; ay_f = 0.0f; az_f = 1.0f;
+
+    /* reset timers */
+    lastTick = HAL_GetTick();
+    g_imu_last_update = lastTick;
+
+    g_tilt_kill = 0;
+    g_tilt_kill_since = 0;
+    g_tilt_unkill_since = 0;
+
+    HAL_GPIO_WritePin(LED_SIGNAL_GPIO_Port, LED_SIGNAL_Pin, 0);
 }
 
+static void PWM_StartAll(void)
+{
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+    __HAL_TIM_MOE_ENABLE(&htim1);
+}
+
+static void PWM_SetSafe(void)
+{
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
+}
+
+static void ReadPwm(PwmPayload_t *p)
+{
+    p->motor_lb = __HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_1);
+    p->motor_lf = __HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_2);
+    p->motor_rf = __HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_3);
+    p->motor_rb = __HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_4);
+}
+
+static void SetPwm(const PwmPayload_t *p)
+{
+    /* always remember last command */
+    g_last_pwm_cmd = *p;
+    g_have_pwm_cmd = 1;
+
+    if (g_tilt_kill)
+    {
+        PWM_SetSafe();
+        return;
+    }
+
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, p->motor_lb);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, p->motor_lf);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, p->motor_rf);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, p->motor_rb);
+}
+
+/* IMU continuous update @ ~100Hz */
 static void IMU_UpdateContinuous(void)
 {
     uint32_t now = HAL_GetTick();
 
-    if ((now - g_imu_last_update) < 10)  // 100 Hz
+    if ((now - g_imu_last_update) < IMU_UPDATE_PERIOD_MS)
         return;
 
     g_imu_last_update = now;
 
     MPU6050_ReadRaw(&hi2c1, &imu);
     MPU6050_ComputeScaled(&imu);
-
-    float acc_norm =
-        imu.acc_x * imu.acc_x +
-        imu.acc_y * imu.acc_y +
-        imu.acc_z * imu.acc_z;
-
-    if (acc_norm < 0.5f || acc_norm > 1.5f)
-        return;
 
     if (lastTick == 0)
     {
@@ -266,16 +350,26 @@ static void IMU_UpdateContinuous(void)
     if (dt > 0.02f)
         dt = 0.02f;
 
-    Madgwick_UpdateIMU(
-        &filter,
-        imu.gyro_x * DEG2RAD,
-        imu.gyro_y * DEG2RAD,
-        imu.gyro_z * DEG2RAD,
-        imu.acc_x,
-        imu.acc_y,
-        imu.acc_z,
-        dt
-    );
+    /* LPF on accelerometer */
+    lpf3(dt, ACC_LPF_CUTOFF_HZ, imu.acc_x, imu.acc_y, imu.acc_z, &ax_f, &ay_f, &az_f);
+
+    /* ACC validity by |a| */
+    int acc_ok = accel_norm_ok(ax_f, ay_f, az_f, ACC_G_MIN, ACC_G_MAX);
+
+    /* Gyro must be rad/s for this Madgwick (we convert deg/s -> rad/s) */
+    float gx = imu.gyro_x * DEG2RAD;
+    float gy = imu.gyro_y * DEG2RAD;
+    float gz = imu.gyro_z * DEG2RAD;
+
+    if (acc_ok)
+    {
+        Madgwick_UpdateIMU(&filter, gx, gy, gz, ax_f, ay_f, az_f, dt);
+    }
+    else
+    {
+        /* gyro-only */
+        Madgwick_UpdateIMU(&filter, gx, gy, gz, 0.0f, 0.0f, 0.0f, dt);
+    }
 
     float roll  = atan2f(
         2.0f * (filter.q0 * filter.q1 + filter.q2 * filter.q3),
@@ -295,106 +389,67 @@ static void IMU_UpdateContinuous(void)
     g_imu_last.pitch = (int16_t)(pitch * 100.0f);
     g_imu_last.yaw   = (int16_t)(yaw   * 100.0f);
 
+    /* ---- Tilt kill with debounce + hysteresis ---- */
+    float aroll = fabsf(roll);
+    float apitch = fabsf(pitch);
+
+    if (!g_tilt_kill)
+    {
+        if (aroll > TILT_KILL_DEG || apitch > TILT_KILL_DEG)
+        {
+            if (g_tilt_kill_since == 0)
+                g_tilt_kill_since = now;
+
+            if ((now - g_tilt_kill_since) >= TILT_KILL_DEBOUNCE_MS)
+            {
+                g_tilt_kill = 1;
+                g_tilt_unkill_since = 0;
+                HAL_GPIO_WritePin(LED_SIGNAL_GPIO_Port, LED_SIGNAL_Pin, 1);
+                PWM_SetSafe();
+            }
+        }
+        else
+        {
+            g_tilt_kill_since = 0;
+        }
+    }
+    else
+    {
+        /* already killed: require stable < UNKILL threshold for some time */
+        if (aroll < TILT_UNKILL_DEG && apitch < TILT_UNKILL_DEG)
+        {
+            if (g_tilt_unkill_since == 0)
+                g_tilt_unkill_since = now;
+
+            if ((now - g_tilt_unkill_since) >= TILT_UNKILL_HOLD_MS)
+            {
+                g_tilt_kill = 0;
+                g_tilt_kill_since = 0;
+                HAL_GPIO_WritePin(LED_SIGNAL_GPIO_Port, LED_SIGNAL_Pin, 0);
+            }
+        }
+        else
+        {
+            g_tilt_unkill_since = 0;
+        }
+    }
+
     g_imu_ready = 1;
 }
 
-
+/* Return last snapshot only (do NOT update filter here) */
 ImuResult_t IMU_ParseData(ImuAngles_t *out)
 {
     if (!out)
         return IMU_ERROR;
 
-    MPU6050_ReadRaw(&hi2c1, &imu);
-    MPU6050_ComputeScaled(&imu);
-
-    float acc_norm =
-        imu.acc_x * imu.acc_x +
-        imu.acc_y * imu.acc_y +
-        imu.acc_z * imu.acc_z;
-
-    if (acc_norm < 0.5f || acc_norm > 1.5f)
+    if (!g_imu_ready)
         return IMU_SKIP;
 
-    uint32_t now = HAL_GetTick();
-
-    if (lastTick == 0)
-    {
-        lastTick = now;
-        return IMU_SKIP;
-    }
-
-    float dt = (now - lastTick) * 0.001f;
-    lastTick = now;
-
-    if (dt <= 0.0f)
-        return IMU_SKIP;
-
-    if (dt > 0.02f)
-        dt = 0.02f;
-
-    Madgwick_UpdateIMU(
-        &filter,
-        imu.gyro_x * DEG2RAD,
-        imu.gyro_y * DEG2RAD,
-        imu.gyro_z * DEG2RAD,
-        imu.acc_x,
-        imu.acc_y,
-        imu.acc_z,
-        dt
-    );
-
-    float roll  = atan2f(
-        2.0f * (filter.q0 * filter.q1 + filter.q2 * filter.q3),
-        1.0f - 2.0f * (filter.q1 * filter.q1 + filter.q2 * filter.q2)
-    ) * RAD2DEG;
-
-    float pitch = asinf(
-        2.0f * (filter.q0 * filter.q2 - filter.q3 * filter.q1)
-    ) * RAD2DEG;
-
-    float yaw = atan2f(
-        2.0f * (filter.q0 * filter.q3 + filter.q1 * filter.q2),
-        1.0f - 2.0f * (filter.q2 * filter.q2 + filter.q3 * filter.q3)
-    ) * RAD2DEG;
-
-    out->roll  = (int16_t)(roll  * 100.0f);
-    out->pitch = (int16_t)(pitch * 100.0f);
-    out->yaw   = (int16_t)(yaw   * 100.0f);
-
+    out->roll  = g_imu_last.roll;
+    out->pitch = g_imu_last.pitch;
+    out->yaw   = g_imu_last.yaw;
     return IMU_OK;
-}
-
-static void PWM_StartAll(void)
-{
-    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
-    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
-    __HAL_TIM_MOE_ENABLE(&htim1);
-}
-
-static void ReadPwm(PwmPayload_t *p)
-{
-    p->motor_lb = __HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_1);
-    p->motor_lf = __HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_2);
-    p->motor_rf = __HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_3);
-    p->motor_rb = __HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_4);
-}
-
-static void SetPwm(const PwmPayload_t *p)
-{
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, p->motor_lb);
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, p->motor_lf);
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, p->motor_rf);
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, p->motor_rb);
-}
-
-static void PWM_SetSafe(void)
-{
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
 }
 
 /* USER CODE END 0 */
@@ -405,30 +460,13 @@ static void PWM_SetSafe(void)
   */
 int main(void)
 {
-
-  /* USER CODE BEGIN 1 */
-  /* USER CODE END 1 */
-
-  /* MCU Configuration--------------------------------------------------------*/
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
-
-  /* USER CODE BEGIN Init */
-  /* USER CODE END Init */
-
-  /* Configure the system clock */
   SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
-  /* USER CODE END SysInit */
-
-  /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_I2C1_Init();
   MX_TIM1_Init();
   MX_USART6_UART_Init();
-  /* USER CODE BEGIN 2 */
 
   PWM_StartAll();
   PWM_SetSafe();
@@ -436,8 +474,6 @@ int main(void)
   ESP_Init();
 
   IMU_Init();
-  lastTick = HAL_GetTick();
-  g_imu_last_update = lastTick;
 
   Protocol_Init();
 
@@ -448,91 +484,84 @@ int main(void)
   __HAL_UART_CLEAR_OREFLAG(&huart6);
   HAL_UART_Receive_IT(&huart6, &uart_rx_it_byte, 1);
 
-
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
+      IMU_UpdateContinuous();
 
-    /* USER CODE BEGIN 3 */
-	      IMU_UpdateContinuous();
+      if (g_tilt_kill)
+          PWM_SetSafe();
 
-	      uint8_t b;
-	      while (UartRing_Pop(&b))
-	      {
-	          ProtoResult_t r = Protocol_PushByte(b);
+      uint8_t b;
+      while (UartRing_Pop(&b))
+      {
+          ProtoResult_t r = Protocol_PushByte(b);
 
-	          if (r == PROTO_OK)
-	          {
-	              const ProtoRxFrame_t *rx = Protocol_GetFrame();
+          if (r == PROTO_OK)
+          {
+              const ProtoRxFrame_t *rx = Protocol_GetFrame();
 
-	              uint8_t tx[64];
-	              uint8_t tx_len = 0;
+              uint8_t tx[64];
+              uint8_t tx_len = 0;
 
-	              if (rx->cmd == CMD_PING)
-	              {
-	                  tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_PONG, NULL, 0, tx, sizeof(tx));
-	              }
-	              else if (rx->cmd == CMD_PWM_READ)
-	              {
-	                  PwmPayload_t pwm;
-	                  ReadPwm(&pwm);
-	                  tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_PWM_DATA,
-	                                               (const uint8_t*)&pwm, PWM_PAYLOAD_SIZE,
-	                                               tx, sizeof(tx));
-	              }
-	              else if (rx->cmd == CMD_PWM_SET)
-	              {
-	                  if (rx->len != PWM_PAYLOAD_SIZE)
-	                  {
-	                      tx_len = Protocol_BuildStatusFrame(ST_ERR_BAD_LEN, tx, sizeof(tx));
-	                  }
-	                  else
-	                  {
-	                      PwmPayload_t pwm;
-	                      memcpy(&pwm, rx->data, PWM_PAYLOAD_SIZE);
-	                      SetPwm(&pwm);
-	                      tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_PWM_ACK, NULL, 0, tx, sizeof(tx));
-	                  }
-	              }
-	              else if (rx->cmd == CMD_IMU_READ)
-	              {
-	                  if (!g_imu_ready)
-	                  {
-	                      tx_len = Protocol_BuildStatusFrame(ST_ERR_IMU_NOT_READY, tx, sizeof(tx));
-	                  }
-	                  else
-	                  {
-	                      ImuPayload_t snap = g_imu_last;
-	                      tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_IMU_DATA,
-	                                                   (const uint8_t*)&snap, IMU_PAYLOAD_SIZE,
-	                                                   tx, sizeof(tx));
-	                  }
-	              }
-	              else
-	              {
-	                  tx_len = Protocol_BuildStatusFrame(ST_ERR_UNKNOWN_CMD, tx, sizeof(tx));
-	              }
+              if (rx->cmd == CMD_PING)
+              {
+                  tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_PONG, NULL, 0, tx, sizeof(tx));
+              }
+              else if (rx->cmd == CMD_PWM_READ)
+              {
+                  PwmPayload_t pwm;
+                  ReadPwm(&pwm);
+                  tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_PWM_DATA,
+                                               (const uint8_t*)&pwm, PWM_PAYLOAD_SIZE,
+                                               tx, sizeof(tx));
+              }
+              else if (rx->cmd == CMD_PWM_SET)
+              {
+                  if (rx->len != PWM_PAYLOAD_SIZE)
+                  {
+                      tx_len = Protocol_BuildStatusFrame(ST_ERR_BAD_LEN, tx, sizeof(tx));
+                  }
+                  else
+                  {
+                      PwmPayload_t pwm;
+                      memcpy(&pwm, rx->data, PWM_PAYLOAD_SIZE);
+                      SetPwm(&pwm);
+                      tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_PWM_ACK, NULL, 0, tx, sizeof(tx));
+                  }
+              }
+              else if (rx->cmd == CMD_IMU_READ)
+              {
+                  if (!g_imu_ready)
+                  {
+                      tx_len = Protocol_BuildStatusFrame(ST_ERR_IMU_NOT_READY, tx, sizeof(tx));
+                  }
+                  else
+                  {
+                      ImuPayload_t snap = g_imu_last;
+                      tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_IMU_DATA,
+                                                   (const uint8_t*)&snap, IMU_PAYLOAD_SIZE,
+                                                   tx, sizeof(tx));
+                  }
+              }
+              else
+              {
+                  tx_len = Protocol_BuildStatusFrame(ST_ERR_UNKNOWN_CMD, tx, sizeof(tx));
+              }
 
-	              if (tx_len > 0)
-	                  HAL_UART_Transmit(&huart6, tx, tx_len, HAL_MAX_DELAY);
-	          }
-	          else if (r == PROTO_ERROR)
-	          {
-	              uint8_t tx[16];
-	              uint8_t tx_len = Protocol_BuildStatusFrame(Protocol_GetLastError(), tx, sizeof(tx));
-	              if (tx_len > 0)
-	                  HAL_UART_Transmit(&huart6, tx, tx_len, HAL_MAX_DELAY);
-	          }
-	      }
+              if (tx_len > 0)
+                  HAL_UART_Transmit(&huart6, tx, tx_len, HAL_MAX_DELAY);
+          }
+          else if (r == PROTO_ERROR)
+          {
+              uint8_t tx[16];
+              uint8_t tx_len = Protocol_BuildStatusFrame(Protocol_GetLastError(), tx, sizeof(tx));
+              if (tx_len > 0)
+                  HAL_UART_Transmit(&huart6, tx, tx_len, HAL_MAX_DELAY);
+          }
+      }
 
-	      HAL_Delay(1);
-
+      HAL_Delay(1);
   }
-  /* USER CODE END 3 */
 }
 
 /**
@@ -544,14 +573,9 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Configure the main internal regulator output voltage
-  */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
@@ -560,8 +584,6 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSE;
@@ -598,37 +620,18 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
         HAL_UART_Receive_IT(&huart6, &uart_rx_it_byte, 1);
     }
 }
-
 /* USER CODE END 4 */
 
-/**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
 void Error_Handler(void)
 {
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
   while (1)
   {
   }
-  /* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT
-/**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
 void assert_failed(uint8_t *file, uint32_t line)
 {
-  /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
