@@ -4,37 +4,47 @@ import threading
 import time
 import queue
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, filedialog
 from tkinter.scrolledtext import ScrolledText
+import os
+
+import numpy as np
+from stl import mesh as stlmesh
+
+import matplotlib
+matplotlib.use("TkAgg")
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.figure import Figure
+
 
 HOST = "0.0.0.0"
 PORT = 3333
 
 FRAME_START = 0xAA
-FRAME_END   = 0x55
+FRAME_END = 0x55
 
 DIR_PC_TO_STM = 0x01
 DIR_STM_TO_PC = 0x00
 
-CMD_PING     = 0x01
-CMD_PONG     = 0x81
+CMD_PING = 0x01
+CMD_PONG = 0x81
 
-CMD_PWM_SET  = 0x11
-CMD_PWM_ACK  = 0x91
+CMD_PWM_SET = 0x11
+CMD_PWM_ACK = 0x91
 
 CMD_IMU_DATA = 0xA0
-CMD_STATUS   = 0xE0
+CMD_STATUS = 0xE0
 
-CMD_NAV_SET  = 0x14
-CMD_NAV_ACK  = 0x94
+CMD_NAV_SET = 0x14
+CMD_NAV_ACK = 0x94
 
-NAV_STOP      = 0
-NAV_FORWARD   = 1
-NAV_RIGHT     = 2
-NAV_BACK      = 3
-NAV_LEFT      = 4
+NAV_STOP = 0
+NAV_FORWARD = 1
+NAV_RIGHT = 2
+NAV_BACK = 3
+NAV_LEFT = 4
 NAV_YAW_RIGHT = 5
-NAV_YAW_LEFT  = 6
+NAV_YAW_LEFT = 6
 
 STATUS_STR = {
     0x01: "BAD_START",
@@ -43,8 +53,9 @@ STATUS_STR = {
     0x04: "BAD_DIR",
     0x05: "BAD_LEN",
     0x06: "UNKNOWN_CMD",
-    0x07: "IMU_NOT_READY"
+    0x07: "IMU_NOT_READY",
 }
+
 
 def calc_crc(*args):
     crc = 0
@@ -52,12 +63,14 @@ def calc_crc(*args):
         crc ^= a
     return crc & 0xFF
 
+
 def build_frame(cmd, payload=b""):
     length = len(payload)
     crc = calc_crc(DIR_PC_TO_STM, cmd, length, *payload)
     return bytes([FRAME_START, DIR_PC_TO_STM, cmd, length]) + payload + bytes([crc, FRAME_END])
 
-def parse_stream(buf):
+
+def parse_stream(buf: bytes):
     frames = []
     while len(buf) >= 6:
         if buf[0] != FRAME_START:
@@ -76,10 +89,10 @@ def parse_stream(buf):
         frame = buf[:frame_len]
         buf = buf[frame_len:]
 
-        start, dir_, cmd, ln = frame[:4]
-        payload = frame[4:4+ln]
-        crc = frame[4+ln]
-        end = frame[5+ln]
+        _, dir_, cmd, ln = frame[:4]
+        payload = frame[4:4 + ln]
+        crc = frame[4 + ln]
+        end = frame[5 + ln]
 
         if end != FRAME_END:
             continue
@@ -88,12 +101,15 @@ def parse_stream(buf):
             continue
 
         frames.append((cmd, payload))
+
     return frames, buf
 
+
 class App:
-    def __init__(self, root):
+    def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("Drone Control (TCP server)")
+
         self.log_q = queue.Queue()
 
         self.srv = None
@@ -105,20 +121,35 @@ class App:
         self.pwm_var = tk.IntVar(value=0)
         self.last_nav_action = NAV_STOP
 
+        self.fig = None
+        self.ax = None
+        self.canvas = None
+        self.toolbar = None
+
         self._build_ui()
         self._ui_poll()
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
     def _build_ui(self):
         top = ttk.Frame(self.root, padding=8)
         top.pack(fill="both", expand=True)
 
+        top.columnconfigure(0, weight=0)  # left
+        top.columnconfigure(1, weight=0)  # controls
+        top.columnconfigure(2, weight=1)  # viewer expands
+        top.rowconfigure(0, weight=0)
+        top.rowconfigure(1, weight=1)     # logs expand
+
         left = ttk.Frame(top)
-        left.pack(side="left", fill="y")
+        left.grid(row=0, column=0, sticky="nsw", padx=(0, 10))
 
-        right = ttk.Frame(top)
-        right.pack(side="right", fill="both", expand=True)
+        controls_col = ttk.Frame(top)
+        controls_col.grid(row=0, column=1, sticky="nw", padx=(0, 10))
 
-        # Left: connection + slider
+        viewer_col = ttk.Frame(top)
+        viewer_col.grid(row=0, column=2, sticky="nsew")
+
+        # --- LEFT: connection + slider ---
         conn_box = ttk.LabelFrame(left, text="Connection", padding=8)
         conn_box.pack(fill="x")
 
@@ -126,13 +157,13 @@ class App:
         self.btn_start.pack(fill="x")
 
         self.btn_ping = ttk.Button(conn_box, text="Ping", command=self.send_ping, state="disabled")
-        self.btn_ping.pack(fill="x", pady=(6,0))
+        self.btn_ping.pack(fill="x", pady=(6, 0))
 
         self.lbl_state = ttk.Label(conn_box, text="State: DISCONNECTED")
-        self.lbl_state.pack(fill="x", pady=(6,0))
+        self.lbl_state.pack(fill="x", pady=(6, 0))
 
         slider_box = ttk.LabelFrame(left, text="Base PWM", padding=8)
-        slider_box.pack(fill="y", pady=(10,0))
+        slider_box.pack(fill="y", pady=(10, 0))
 
         self.lbl_pwm = ttk.Label(slider_box, text="0")
         self.lbl_pwm.pack()
@@ -148,22 +179,22 @@ class App:
         self.slider.bind("<ButtonRelease-1>", self._on_slider_release)
 
         self.btn_set_manual = ttk.Button(slider_box, text="Manual (PWM)", command=self.send_manual_pwm, state="disabled")
-        self.btn_set_manual.pack(fill="x", pady=(6,0))
+        self.btn_set_manual.pack(fill="x", pady=(6, 0))
 
-        # Right: controls + logs
-        ctrl_box = ttk.LabelFrame(right, text="Controls", padding=8)
-        ctrl_box.pack(fill="x")
+        # --- CONTROLS: arrows ---
+        ctrl_box = ttk.LabelFrame(controls_col, text="Controls", padding=8)
+        ctrl_box.pack(anchor="nw")
 
         grid = ttk.Frame(ctrl_box)
         grid.pack()
 
         self.btn_yawl = ttk.Button(grid, text="⟲", width=6, command=lambda: self.send_nav(NAV_YAW_LEFT), state="disabled")
-        self.btn_fwd  = ttk.Button(grid, text="↑",  width=6, command=lambda: self.send_nav(NAV_FORWARD), state="disabled")
+        self.btn_fwd = ttk.Button(grid, text="↑", width=6, command=lambda: self.send_nav(NAV_FORWARD), state="disabled")
         self.btn_yawr = ttk.Button(grid, text="⟳", width=6, command=lambda: self.send_nav(NAV_YAW_RIGHT), state="disabled")
 
         self.btn_left = ttk.Button(grid, text="←", width=6, command=lambda: self.send_nav(NAV_LEFT), state="disabled")
         self.btn_stop = ttk.Button(grid, text="STOP", width=6, command=lambda: self.send_nav(NAV_STOP), state="disabled")
-        self.btn_right= ttk.Button(grid, text="→", width=6, command=lambda: self.send_nav(NAV_RIGHT), state="disabled")
+        self.btn_right = ttk.Button(grid, text="→", width=6, command=lambda: self.send_nav(NAV_RIGHT), state="disabled")
 
         self.btn_back = ttk.Button(grid, text="↓", width=6, command=lambda: self.send_nav(NAV_BACK), state="disabled")
 
@@ -177,11 +208,126 @@ class App:
 
         self.btn_back.grid(row=2, column=1, padx=4, pady=4)
 
-        log_box = ttk.LabelFrame(right, text="Logs", padding=8)
-        log_box.pack(fill="both", expand=True, pady=(10,0))
+        # --- VIEWER: STL (matplotlib 3D) ---
+        viewer_box = ttk.LabelFrame(viewer_col, text="3D Model (STL)", padding=6)
+        viewer_box.pack(fill="both", expand=True)
+
+        viewer_top = ttk.Frame(viewer_box)
+        viewer_top.pack(fill="x")
+
+        self.btn_load_stl = ttk.Button(viewer_top, text="Load STL...", command=self._pick_and_load_stl)
+        self.btn_load_stl.pack(side="left")
+
+        self.lbl_stl = ttk.Label(viewer_top, text="(no model)")
+        self.lbl_stl.pack(side="left", padx=(8, 0))
+
+        fig_frame = ttk.Frame(viewer_box)
+        fig_frame.pack(fill="both", expand=True, pady=(6, 0))
+
+        self.fig = Figure(figsize=(6, 3.5), dpi=100)
+        self.ax = self.fig.add_subplot(111, projection="3d")
+        self.ax.set_title("STL Preview", pad=10)
+
+        self.canvas = FigureCanvasTkAgg(self.fig, master=fig_frame)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack(fill="both", expand=True)
+
+        self.toolbar = NavigationToolbar2Tk(self.canvas, fig_frame)
+        self.toolbar.update()
+
+        self._clear_viewer()
+
+        # --- LOGS bottom ---
+        log_box = ttk.LabelFrame(top, text="Logs", padding=8)
+        log_box.grid(row=1, column=0, columnspan=3, sticky="nsew", pady=(10, 0))
 
         self.log = ScrolledText(log_box, height=12, wrap="word", state="disabled")
         self.log.pack(fill="both", expand=True)
+
+    def _clear_viewer(self):
+        self.ax.cla()
+        self.ax.set_title("STL Preview", pad=10)
+        self.ax.set_xlabel("X")
+        self.ax.set_ylabel("Y")
+        self.ax.set_zlabel("Z")
+        self.ax.grid(True)
+        self.canvas.draw()
+
+    def _set_axes_equal(self, ax, x, y, z):
+        x_min, x_max = np.min(x), np.max(x)
+        y_min, y_max = np.min(y), np.max(y)
+        z_min, z_max = np.min(z), np.max(z)
+
+        max_range = max(x_max - x_min, y_max - y_min, z_max - z_min)
+        if max_range <= 0:
+            max_range = 1.0
+
+        x_mid = (x_max + x_min) * 0.5
+        y_mid = (y_max + y_min) * 0.5
+        z_mid = (z_max + z_min) * 0.5
+
+        half = max_range * 0.5
+        ax.set_xlim(x_mid - half, x_mid + half)
+        ax.set_ylim(y_mid - half, y_mid + half)
+        ax.set_zlim(z_mid - half, z_mid + half)
+
+    def _pick_and_load_stl(self):
+        path = filedialog.askopenfilename(
+            title="Select STL",
+            filetypes=[("STL files", "*.stl"), ("All files", "*.*")]
+        )
+        if not path:
+            return
+        self.load_stl(path)
+
+    def load_stl(self, path: str):
+        try:
+            m = stlmesh.Mesh.from_file(path)
+        except Exception as e:
+            self.log_put(f"STL load error: {e}")
+            return
+
+        self.ax.cla()
+        self.ax.set_title("STL Preview", pad=10)
+        self.ax.set_xlabel("X")
+        self.ax.set_ylabel("Y")
+        self.ax.set_zlabel("Z")
+
+        vectors = m.vectors  # (N, 3, 3)
+        x = vectors[:, :, 0].ravel()
+        y = vectors[:, :, 1].ravel()
+        z = vectors[:, :, 2].ravel()
+
+        # rysuj trójkąty jako "surface"
+        try:
+            # triangles indices for plot_trisurf
+            pts = np.column_stack([x, y, z])
+            # plot_trisurf needs triangulation in 2D; for 3D mesh it can still work if we provide faces
+            # easiest: build unique vertices + faces
+            verts = vectors.reshape(-1, 3)
+            # unique vertices mapping
+            uniq, inv = np.unique(np.round(verts, 6), axis=0, return_inverse=True)
+            faces = inv.reshape(-1, 3)
+            self.ax.plot_trisurf(
+                uniq[:, 0], uniq[:, 1], uniq[:, 2],
+                triangles=faces,
+                linewidth=0.2,
+                antialiased=True,
+                alpha=0.9
+            )
+        except Exception:
+            # fallback: same but as wireframe
+            for tri in vectors:
+                xs = [tri[0][0], tri[1][0], tri[2][0], tri[0][0]]
+                ys = [tri[0][1], tri[1][1], tri[2][1], tri[0][1]]
+                zs = [tri[0][2], tri[1][2], tri[2][2], tri[0][2]]
+                self.ax.plot(xs, ys, zs, linewidth=0.5)
+
+        self._set_axes_equal(self.ax, x, y, z)
+        self.canvas.draw()
+
+        self.lbl_stl.config(text=os.path.basename(path))
+        self.log_put(f"Loaded STL: {path}")
 
     def _on_slider(self, _=None):
         val = int(float(self.slider.get()) / 100) * 100
@@ -199,13 +345,13 @@ class App:
         self.send(build_frame(CMD_NAV_SET, payload))
 
         name = {
-            NAV_STOP:"STOP", NAV_FORWARD:"FWD", NAV_RIGHT:"RIGHT", NAV_BACK:"BACK",
-            NAV_LEFT:"LEFT", NAV_YAW_RIGHT:"YAW_R", NAV_YAW_LEFT:"YAW_L"
+            NAV_STOP: "STOP", NAV_FORWARD: "FWD", NAV_RIGHT: "RIGHT", NAV_BACK: "BACK",
+            NAV_LEFT: "LEFT", NAV_YAW_RIGHT: "YAW_R", NAV_YAW_LEFT: "YAW_L",
         }.get(action, str(action))
 
         self.log_put(f"TX: NAV (slider release) {name} base={base}")
 
-    def log_put(self, msg):
+    def log_put(self, msg: str):
         self.log_q.put(msg)
 
     def _ui_poll(self):
@@ -223,8 +369,12 @@ class App:
     def set_connected(self, connected: bool):
         self.lbl_state.config(text="State: CONNECTED" if connected else "State: DISCONNECTED")
         state = "normal" if connected else "disabled"
-        for b in [self.btn_ping, self.btn_set_manual, self.btn_yawl, self.btn_fwd, self.btn_yawr,
-                  self.btn_left, self.btn_stop, self.btn_right, self.btn_back]:
+        for b in [
+            self.btn_ping, self.btn_set_manual,
+            self.btn_yawl, self.btn_fwd, self.btn_yawr,
+            self.btn_left, self.btn_stop, self.btn_right,
+            self.btn_back,
+        ]:
             b.config(state=state)
 
     def start_server(self):
@@ -258,15 +408,17 @@ class App:
                 try:
                     if self.conn:
                         self.conn.close()
-                except:
+                except Exception:
                     pass
                 try:
                     if self.srv:
                         self.srv.close()
-                except:
+                except Exception:
                     pass
+
                 self.conn = None
                 self.srv = None
+
                 self.root.after(0, lambda: self.set_connected(False))
                 self.root.after(0, lambda: self.btn_start.config(state="normal"))
                 self.log_put("Server stopped.")
@@ -292,15 +444,17 @@ class App:
         self.send(build_frame(CMD_PWM_SET, payload))
         self.log_put(f"TX: MANUAL PWM={val}")
 
-    def send_nav(self, action):
+    def send_nav(self, action: int):
         base = int(self.pwm_var.get())
         self.last_nav_action = action
         payload = struct.pack("<HB", base, action)
         self.send(build_frame(CMD_NAV_SET, payload))
+
         name = {
-            NAV_STOP:"STOP", NAV_FORWARD:"FWD", NAV_RIGHT:"RIGHT", NAV_BACK:"BACK",
-            NAV_LEFT:"LEFT", NAV_YAW_RIGHT:"YAW_R", NAV_YAW_LEFT:"YAW_L"
+            NAV_STOP: "STOP", NAV_FORWARD: "FWD", NAV_RIGHT: "RIGHT", NAV_BACK: "BACK",
+            NAV_LEFT: "LEFT", NAV_YAW_RIGHT: "YAW_R", NAV_YAW_LEFT: "YAW_L",
         }.get(action, str(action))
+
         self.log_put(f"TX: NAV {name} base={base}")
 
     def rx_loop(self):
@@ -338,10 +492,26 @@ class App:
 
             time.sleep(0.01)
 
+    def on_close(self):
+        self.running = False
+        try:
+            if self.conn:
+                self.conn.close()
+        except Exception:
+            pass
+        try:
+            if self.srv:
+                self.srv.close()
+        except Exception:
+            pass
+        self.root.destroy()
+
+
 def main():
     root = tk.Tk()
     app = App(root)
     root.mainloop()
+
 
 if __name__ == "__main__":
     main()
