@@ -32,6 +32,9 @@ CMD_PWM_ACK  = 0x91
 CMD_IMU_READ = 0x20
 CMD_IMU_DATA = 0xA0
 
+CMD_TELEM_READ = 0x21
+CMD_TELEM_DATA = 0xA1
+
 CMD_STATUS   = 0xE0
 
 CMD_NAV_SET  = 0x14
@@ -144,6 +147,10 @@ class App:
         }
         self.last_pwm = {"LF": 0, "RF": 0, "LB": 0, "RB": 0}
 
+        self.roll_var = tk.StringVar(value="ROLL: --.-°")
+        self.pitch_var = tk.StringVar(value="PITCH: --.-°")
+        self.yaw_var = tk.StringVar(value="YAW: --.-°")
+
         self._build_ui()
         self._ui_poll()
         self._plot_update()
@@ -217,6 +224,13 @@ class App:
         self.btn_right.grid(row=1, column=2, padx=4, pady=4)
 
         self.btn_back.grid(row=2, column=1, padx=4, pady=4)
+
+        imu_box = ttk.Frame(controls)
+        imu_box.grid(row=3, column=0, columnspan=3, sticky="w", padx=4, pady=(8, 0))
+
+        ttk.Label(imu_box, textvariable=self.roll_var).pack(anchor="w")
+        ttk.Label(imu_box, textvariable=self.pitch_var).pack(anchor="w")
+        ttk.Label(imu_box, textvariable=self.yaw_var).pack(anchor="w")
 
         plot_box = ttk.LabelFrame(top_right, text="PWM (live)", padding=6)
         plot_box.pack(side="left", fill="both", expand=True, padx=(10,0))
@@ -400,7 +414,7 @@ class App:
     def pwm_poll_loop(self):
         while not self.pwm_poll_stop.is_set():
             if self.conn and self.pwm_poll_on:
-                self.send_frame(CMD_PWM_READ)
+                self.send_frame(CMD_TELEM_READ)
             time.sleep(self.pwm_poll_interval_s)
 
     def send_ping(self):
@@ -526,6 +540,31 @@ class App:
                     roll, pitch, yaw = struct.unpack("<hhh", payload)
                     self.log_put(f"RX IMU: R={roll/100:.1f} P={pitch/100:.1f} Y={yaw/100:.1f}")
 
+                elif cmd == CMD_TELEM_DATA:
+                    if len(payload) == 14:
+                        roll, pitch, yaw, lb, lf, rf, rb = struct.unpack("<hhhHHHH", payload)
+
+                        r = roll / 100.0
+                        p = pitch / 100.0
+                        y = yaw / 100.0
+
+                        self.root.after(0, lambda rr=r, pp=p, yy=y: (
+                            self.roll_var.set(f"ROLL: {rr:+.1f}°"),
+                            self.pitch_var.set(f"PITCH: {pp:+.1f}°"),
+                            self.yaw_var.set(f"YAW: {yy:+.1f}°")
+                        ))
+
+                        self.last_pwm = {"LF": lf, "RF": rf, "LB": lb, "RB": rb}
+
+                        t = time.monotonic() - self.t0
+                        self.t_hist.append(t)
+                        self.pwm_hist["LF"].append(lf)
+                        self.pwm_hist["RF"].append(rf)
+                        self.pwm_hist["LB"].append(lb)
+                        self.pwm_hist["RB"].append(rb)
+                    else:
+                        self.log_put(f"RX: TELEM bad len={len(payload)}")
+                        
             time.sleep(0.005)
 
 def main():

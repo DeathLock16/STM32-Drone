@@ -890,6 +890,24 @@ int main(void)
                                          tx, sizeof(tx));
           }
         }
+        else if (rx->cmd == CMD_TELEM_READ)
+        {
+          if (!g_imu_ready)
+          {
+            tx_len = Protocol_BuildStatusFrame(ST_ERR_IMU_NOT_READY, tx, sizeof(tx));
+          }
+          else
+          {
+            TelemetryPayload_t tp;
+
+            tp.imu = g_imu_last;      // snapshot IMU
+            ReadPwm(&tp.pwm);         // snapshot PWM
+
+            tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_TELEM_DATA,
+                                         (const uint8_t*)&tp, TELEM_PAYLOAD_SIZE,
+                                         tx, sizeof(tx));
+          }
+        }
         else if (rx->cmd == CMD_STAB_SET)
         {
           if (rx->len != STAB_PAYLOAD_SIZE)

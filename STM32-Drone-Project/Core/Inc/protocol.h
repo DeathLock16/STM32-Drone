@@ -12,7 +12,7 @@
 #define PWM_PAYLOAD_SIZE  (PWM_MOTOR_COUNT * 2)
 
 /* IMU payload = 3x int16 = 6 bajtów */
-typedef struct
+typedef struct __attribute__((packed))
 {
     int16_t roll;
     int16_t pitch;
@@ -78,10 +78,13 @@ typedef enum
     CMD_STATUS    = 0xE0,
 
     CMD_IMU_READ  = 0x20,
-    CMD_IMU_DATA  = 0xA0
+    CMD_IMU_DATA  = 0xA0,
+
+	CMD_TELEM_READ = 0X21,
+	CMD_TELEM_DATA = 0XA1
 } ProtoCmd_t;
 
-typedef struct
+typedef struct __attribute__((packed))
 {
     uint16_t motor_lb;
     uint16_t motor_lf;
@@ -127,6 +130,15 @@ typedef struct __attribute__((packed))
 } NavPayload_t;
 
 #define NAV_PAYLOAD_SIZE 3u
+
+typedef struct __attribute__((packed))
+{
+    ImuPayload_t imu;   // 6B
+    PwmPayload_t pwm;   // 8B
+} TelemetryPayload_t;
+
+#define TELEM_PAYLOAD_SIZE ((uint8_t)sizeof(TelemetryPayload_t)) // 14
+
 
 /* ====== API ====== */
 void Protocol_Init(void);
