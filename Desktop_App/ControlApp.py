@@ -6,8 +6,12 @@ import queue
 import tkinter as tk
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
+from collections import deque
 
-HOST = "0.0.0.0"
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+HOST = "192.168.8.100"
 PORT = 3333
 
 FRAME_START = 0xAA
@@ -19,19 +23,22 @@ DIR_STM_TO_PC = 0x00
 CMD_PING     = 0x01
 CMD_PONG     = 0x81
 
+CMD_PWM_READ = 0x10
+CMD_PWM_DATA = 0x90
+
 CMD_PWM_SET  = 0x11
 CMD_PWM_ACK  = 0x91
 
-CMD_STAB_SET     = 0x12
-CMD_STAB_ACK     = 0x92
-CMD_STAB_OFF     = 0x13
-CMD_STAB_OFF_ACK = 0x93
+CMD_IMU_READ = 0x20
+CMD_IMU_DATA = 0xA0
+
+CMD_STATUS   = 0xE0
 
 CMD_NAV_SET  = 0x14
 CMD_NAV_ACK  = 0x94
 
-CMD_IMU_DATA = 0xA0
-CMD_STATUS   = 0xE0
+CMD_STAB_OFF     = 0x13
+CMD_STAB_OFF_ACK = 0x93
 
 NAV_STOP      = 0
 NAV_FORWARD   = 1
@@ -50,9 +57,6 @@ STATUS_STR = {
     0x06: "UNKNOWN_CMD",
     0x07: "IMU_NOT_READY"
 }
-
-AUTO_RAMP_HZ = 10.0
-AUTO_RAMP_RATE_PWM_PER_S = 1200.0
 
 def calc_crc(*args):
     crc = 0
@@ -84,7 +88,7 @@ def parse_stream(buf):
         frame = buf[:frame_len]
         buf = buf[frame_len:]
 
-        start, dir_, cmd, ln = frame[:4]
+        _, dir_, cmd, ln = frame[:4]
         payload = frame[4:4+ln]
         crc = frame[4+ln]
         end = frame[5+ln]
@@ -98,17 +102,6 @@ def parse_stream(buf):
         frames.append((cmd, payload))
     return frames, buf
 
-def slew_int(cur: int, target: int, rate_per_s: float, dt: float) -> int:
-    if dt <= 0:
-        return cur
-    step = rate_per_s * dt
-    d = target - cur
-    if d > step:
-        d = step
-    elif d < -step:
-        d = -step
-    return int(round(cur + d))
-
 class App:
     def __init__(self, root):
         self.root = root
@@ -117,20 +110,43 @@ class App:
 
         self.srv = None
         self.conn = None
-        self.rx_thread = None
         self.running = False
         self.rx_buf = b""
 
-        self.pwm_var = tk.IntVar(value=0)
-        self.last_nav_action = NAV_STOP
+        self.rx_thread = None
+        self.tx_thread = None
 
-        self.auto_ramp_var = tk.BooleanVar(value=False)
-        self.auto_ramp_thread = None
-        self.auto_ramp_stop = threading.Event()
-        self.auto_ramp_cur = 0
+        self.tx_q = queue.Queue(maxsize=2000)
+        self.tx_stop = threading.Event()
+
+        self.pwm_var = tk.IntVar(value=0)
+
+        self.desired_action = NAV_STOP
+        self.current_base_sent = 0
+
+        self.takeoff_on = False
+        self.takeoff_stop = threading.Event()
+        self.takeoff_thread = None
+
+        self.pwm_poll_on = True
+        self.pwm_poll_interval_s = 0.05  # 20 Hz
+        self.pwm_poll_thread = None
+        self.pwm_poll_stop = threading.Event()
+
+        self.t0 = time.monotonic()
+        self.hist_len = 300
+        self.t_hist = deque(maxlen=self.hist_len)
+        self.pwm_hist = {
+            "LF": deque(maxlen=self.hist_len),
+            "RF": deque(maxlen=self.hist_len),
+            "LB": deque(maxlen=self.hist_len),
+            "RB": deque(maxlen=self.hist_len),
+        }
+        self.last_pwm = {"LF": 0, "RF": 0, "LB": 0, "RB": 0}
 
         self._build_ui()
         self._ui_poll()
+        self._plot_update()
 
     def _build_ui(self):
         top = ttk.Frame(self.root, padding=8)
@@ -155,7 +171,7 @@ class App:
         self.lbl_state.pack(fill="x", pady=(6,0))
 
         slider_box = ttk.LabelFrame(left, text="Base PWM", padding=8)
-        slider_box.pack(fill="y", pady=(10,0))
+        slider_box.pack(fill="y", pady=(10,0), expand=True)
 
         self.lbl_pwm = ttk.Label(slider_box, text="0")
         self.lbl_pwm.pack()
@@ -173,30 +189,24 @@ class App:
         self.btn_set_manual = ttk.Button(slider_box, text="Manual (PWM)", command=self.send_manual_pwm, state="disabled")
         self.btn_set_manual.pack(fill="x", pady=(6,0))
 
-        self.auto_btn = ttk.Checkbutton(
-            slider_box,
-            text="AUTO RAMP (STAB)",
-            variable=self.auto_ramp_var,
-            command=self._on_auto_ramp_toggle
-        )
-        self.auto_btn.pack(fill="x", pady=(10,0))
-        self.auto_btn.state(["disabled"])
+        self.btn_takeoff = ttk.Button(slider_box, text="TAKEOFF (smooth)", command=self.toggle_takeoff, state="disabled")
+        self.btn_takeoff.pack(fill="x", pady=(6,0))
 
-        ctrl_box = ttk.LabelFrame(right, text="Controls", padding=8)
-        ctrl_box.pack(fill="x")
+        top_right = ttk.Frame(right)
+        top_right.pack(fill="both", expand=True)
 
-        grid = ttk.Frame(ctrl_box)
-        grid.pack()
+        controls = ttk.Frame(top_right)
+        controls.pack(side="left", anchor="n")
 
-        self.btn_yawl = ttk.Button(grid, text="⟲", width=6, command=lambda: self.send_nav(NAV_YAW_LEFT), state="disabled")
-        self.btn_fwd  = ttk.Button(grid, text="↑",  width=6, command=lambda: self.send_nav(NAV_FORWARD), state="disabled")
-        self.btn_yawr = ttk.Button(grid, text="⟳", width=6, command=lambda: self.send_nav(NAV_YAW_RIGHT), state="disabled")
+        self.btn_yawl = ttk.Button(controls, text="⟲", width=6, command=lambda: self.send_nav(NAV_YAW_LEFT), state="disabled")
+        self.btn_fwd  = ttk.Button(controls, text="↑",  width=6, command=lambda: self.send_nav(NAV_FORWARD), state="disabled")
+        self.btn_yawr = ttk.Button(controls, text="⟳", width=6, command=lambda: self.send_nav(NAV_YAW_RIGHT), state="disabled")
 
-        self.btn_left = ttk.Button(grid, text="←", width=6, command=lambda: self.send_nav(NAV_LEFT), state="disabled")
-        self.btn_stop = ttk.Button(grid, text="STOP", width=6, command=lambda: self.send_nav(NAV_STOP), state="disabled")
-        self.btn_right= ttk.Button(grid, text="→", width=6, command=lambda: self.send_nav(NAV_RIGHT), state="disabled")
+        self.btn_left = ttk.Button(controls, text="←", width=6, command=lambda: self.send_nav(NAV_LEFT), state="disabled")
+        self.btn_stop = ttk.Button(controls, text="STOP", width=6, command=lambda: self.send_nav(NAV_STOP), state="disabled")
+        self.btn_right= ttk.Button(controls, text="→", width=6, command=lambda: self.send_nav(NAV_RIGHT), state="disabled")
 
-        self.btn_back = ttk.Button(grid, text="↓", width=6, command=lambda: self.send_nav(NAV_BACK), state="disabled")
+        self.btn_back = ttk.Button(controls, text="↓", width=6, command=lambda: self.send_nav(NAV_BACK), state="disabled")
 
         self.btn_yawl.grid(row=0, column=0, padx=4, pady=4)
         self.btn_fwd.grid(row=0, column=1, padx=4, pady=4)
@@ -207,6 +217,24 @@ class App:
         self.btn_right.grid(row=1, column=2, padx=4, pady=4)
 
         self.btn_back.grid(row=2, column=1, padx=4, pady=4)
+
+        plot_box = ttk.LabelFrame(top_right, text="PWM (live)", padding=6)
+        plot_box.pack(side="left", fill="both", expand=True, padx=(10,0))
+
+        fig = Figure(figsize=(6.0, 2.8), dpi=100)
+        self.ax = fig.add_subplot(111)
+        self.ax.set_xlabel("time (s)")
+        self.ax.set_ylabel("PWM")
+
+        self.line_lf, = self.ax.plot([], [], label="LF")
+        self.line_rf, = self.ax.plot([], [], label="RF")
+        self.line_lb, = self.ax.plot([], [], label="LB")
+        self.line_rb, = self.ax.plot([], [], label="RB")
+
+        self.ax.legend(loc="upper right")
+
+        self.canvas = FigureCanvasTkAgg(fig, master=plot_box)
+        self.canvas.get_tk_widget().pack(fill="both", expand=True)
 
         log_box = ttk.LabelFrame(right, text="Logs", padding=8)
         log_box.pack(fill="both", expand=True, pady=(10,0))
@@ -222,23 +250,14 @@ class App:
     def _on_slider_release(self, _event=None):
         if not self.conn:
             return
-
-        if self.auto_ramp_var.get():
-            self.log_put(f"Slider target updated: {int(self.pwm_var.get())} (AUTO RAMP)")
+        if self.takeoff_on:
             return
 
         base = int(self.pwm_var.get())
-        action = int(self.last_nav_action)
+        payload = struct.pack("<HB", base, int(self.desired_action))
+        self.send_frame(CMD_NAV_SET, payload)
 
-        payload = struct.pack("<HB", base, action)
-        self.send(build_frame(CMD_NAV_SET, payload))
-
-        name = {
-            NAV_STOP:"STOP", NAV_FORWARD:"FWD", NAV_RIGHT:"RIGHT", NAV_BACK:"BACK",
-            NAV_LEFT:"LEFT", NAV_YAW_RIGHT:"YAW_R", NAV_YAW_LEFT:"YAW_L"
-        }.get(action, str(action))
-
-        self.log_put(f"TX: NAV (slider release) {name} base={base}")
+        self.log_put(f"TX: NAV (slider release) act={self.desired_action} base={base}")
 
     def log_put(self, msg):
         self.log_q.put(msg)
@@ -255,20 +274,39 @@ class App:
             pass
         self.root.after(50, self._ui_poll)
 
+    def _plot_update(self):
+        try:
+            if len(self.t_hist) >= 2:
+                t = list(self.t_hist)
+                t0 = t[-1]
+                x = [ti - t0 for ti in t]
+
+                y_lf = list(self.pwm_hist["LF"])
+                y_rf = list(self.pwm_hist["RF"])
+                y_lb = list(self.pwm_hist["LB"])
+                y_rb = list(self.pwm_hist["RB"])
+
+                self.line_lf.set_data(x, y_lf)
+                self.line_rf.set_data(x, y_rf)
+                self.line_lb.set_data(x, y_lb)
+                self.line_rb.set_data(x, y_rb)
+
+                self.ax.relim()
+                self.ax.autoscale_view()
+
+                self.canvas.draw_idle()
+        except Exception:
+            pass
+
+        self.root.after(100, self._plot_update)
+
     def set_connected(self, connected: bool):
         self.lbl_state.config(text="State: CONNECTED" if connected else "State: DISCONNECTED")
         state = "normal" if connected else "disabled"
-
-        for b in [self.btn_ping, self.btn_set_manual, self.btn_yawl, self.btn_fwd, self.btn_yawr,
+        for b in [self.btn_ping, self.btn_set_manual, self.btn_takeoff,
+                  self.btn_yawl, self.btn_fwd, self.btn_yawr,
                   self.btn_left, self.btn_stop, self.btn_right, self.btn_back]:
             b.config(state=state)
-
-        if connected:
-            self.auto_btn.state(["!disabled"])
-        else:
-            self._stop_auto_ramp(send_safe=False)
-            self.auto_ramp_var.set(False)
-            self.auto_btn.state(["disabled"])
 
     def start_server(self):
         if self.running:
@@ -290,6 +328,14 @@ class App:
                 self.conn.settimeout(0.05)
                 self.log_put(f"Connected from {addr}")
 
+                self.tx_stop.clear()
+                self.tx_thread = threading.Thread(target=self.tx_loop, daemon=True)
+                self.tx_thread.start()
+
+                self.pwm_poll_stop.clear()
+                self.pwm_poll_thread = threading.Thread(target=self.pwm_poll_loop, daemon=True)
+                self.pwm_poll_thread.start()
+
                 self.root.after(0, lambda: self.set_connected(True))
 
                 self.rx_loop()
@@ -298,7 +344,13 @@ class App:
                 self.log_put(f"Server error: {e}")
             finally:
                 self.running = False
-                self._stop_auto_ramp(send_safe=False)
+
+                self.takeoff_stop.set()
+                self.takeoff_on = False
+
+                self.tx_stop.set()
+                self.pwm_poll_stop.set()
+
                 try:
                     if self.conn:
                         self.conn.close()
@@ -309,8 +361,10 @@ class App:
                         self.srv.close()
                 except:
                     pass
+
                 self.conn = None
                 self.srv = None
+
                 self.root.after(0, lambda: self.set_connected(False))
                 self.root.after(0, lambda: self.btn_start.config(state="normal"))
                 self.log_put("Server stopped.")
@@ -318,92 +372,104 @@ class App:
         self.rx_thread = threading.Thread(target=worker, daemon=True)
         self.rx_thread.start()
 
-    def send(self, data: bytes):
+    def send_frame(self, cmd, payload=b""):
+        frame = build_frame(cmd, payload)
         if not self.conn:
             return
         try:
-            self.conn.sendall(data)
-        except Exception as e:
-            self.log_put(f"Send failed: {e}")
+            self.tx_q.put_nowait(frame)
+        except queue.Full:
+            self.log_put("TX queue full: dropping frame")
+
+    def tx_loop(self):
+        while not self.tx_stop.is_set():
+            try:
+                data = self.tx_q.get(timeout=0.1)
+            except queue.Empty:
+                continue
+
+            if not self.conn:
+                continue
+
+            try:
+                self.conn.sendall(data)
+            except Exception as e:
+                self.log_put(f"Send failed: {e}")
+                break
+
+    def pwm_poll_loop(self):
+        while not self.pwm_poll_stop.is_set():
+            if self.conn and self.pwm_poll_on:
+                self.send_frame(CMD_PWM_READ)
+            time.sleep(self.pwm_poll_interval_s)
 
     def send_ping(self):
-        self.send(build_frame(CMD_PING))
+        self.send_frame(CMD_PING)
         self.log_put("TX: PING")
 
     def send_manual_pwm(self):
-        if self.auto_ramp_var.get():
-            self.log_put("Manual PWM blocked (AUTO RAMP is ON).")
+        if self.takeoff_on:
             return
         val = int(self.pwm_var.get())
         payload = struct.pack("<HHHH", val, val, val, val)
-        self.send(build_frame(CMD_PWM_SET, payload))
+        self.send_frame(CMD_PWM_SET, payload)
         self.log_put(f"TX: MANUAL PWM={val}")
 
     def send_nav(self, action):
-        if self.auto_ramp_var.get():
-            self.log_put("NAV blocked (AUTO RAMP is ON). Toggle it OFF to use arrows.")
+        if not self.conn:
             return
 
-        base = int(self.pwm_var.get())
-        self.last_nav_action = action
-        payload = struct.pack("<HB", base, action)
-        self.send(build_frame(CMD_NAV_SET, payload))
-        name = {
-            NAV_STOP:"STOP", NAV_FORWARD:"FWD", NAV_RIGHT:"RIGHT", NAV_BACK:"BACK",
-            NAV_LEFT:"LEFT", NAV_YAW_RIGHT:"YAW_R", NAV_YAW_LEFT:"YAW_L"
-        }.get(action, str(action))
-        self.log_put(f"TX: NAV {name} base={base}")
+        self.desired_action = int(action)
 
-    def send_stab_off(self):
-        self.send(build_frame(CMD_STAB_OFF, b""))
-        self.log_put("TX: STAB_OFF (PWM_SetSafe)")
+        base = self.current_base_sent if self.takeoff_on else int(self.pwm_var.get())
+        payload = struct.pack("<HB", base, int(self.desired_action))
+        self.send_frame(CMD_NAV_SET, payload)
 
-    def _on_auto_ramp_toggle(self):
-        if self.auto_ramp_var.get():
-            if not self.conn:
-                self.auto_ramp_var.set(False)
-                return
-            self._start_auto_ramp()
+        self.log_put(f"TX: NAV act={self.desired_action} base={base}")
+
+    def toggle_takeoff(self):
+        if not self.conn:
+            return
+
+        if not self.takeoff_on:
+            self.takeoff_on = True
+            self.takeoff_stop.clear()
+            self.desired_action = NAV_STOP
+            self.btn_takeoff.config(text="DISARM (STAB_OFF)")
+            self.log_put("TAKEOFF: start smooth ramp (action stays changeable)")
+
+            def ramp_worker():
+                base = self.current_base_sent
+                step = 80
+                interval = 0.03
+
+                while not self.takeoff_stop.is_set() and self.conn:
+                    target = int(self.pwm_var.get())
+
+                    if base < target:
+                        base = min(base + step, target)
+                    elif base > target:
+                        base = max(base - step, target)
+
+                    self.current_base_sent = base
+                    payload = struct.pack("<HB", base, int(self.desired_action))
+                    self.send_frame(CMD_NAV_SET, payload)
+
+                    time.sleep(interval)
+
+                self.log_put("TAKEOFF: ramp stopped")
+
+            self.takeoff_thread = threading.Thread(target=ramp_worker, daemon=True)
+            self.takeoff_thread.start()
+
         else:
-            self._stop_auto_ramp(send_safe=True)
+            self.takeoff_on = False
+            self.takeoff_stop.set()
 
-    def _start_auto_ramp(self):
-        if self.auto_ramp_thread and self.auto_ramp_thread.is_alive():
-            return
+            self.send_frame(CMD_STAB_OFF)
+            self.log_put("TX: STAB_OFF (PWM_SetSafe)")
 
-        self.auto_ramp_stop.clear()
-        self.last_nav_action = NAV_STOP
-
-        self.auto_ramp_cur = 0
-        self.log_put("AUTO RAMP: ON (NAV_STOP). Using slider as target PWM.")
-
-        def worker():
-            last_t = time.time()
-            while self.running and self.conn and (not self.auto_ramp_stop.is_set()):
-                now = time.time()
-                dt = now - last_t
-                last_t = now
-
-                target = int(self.pwm_var.get())
-                self.auto_ramp_cur = slew_int(self.auto_ramp_cur, target, AUTO_RAMP_RATE_PWM_PER_S, dt)
-                base = int(max(0, min(10000, self.auto_ramp_cur)))
-
-                payload = struct.pack("<HB", base, NAV_STOP)
-                self.send(build_frame(CMD_NAV_SET, payload))
-
-                time.sleep(1.0 / AUTO_RAMP_HZ)
-
-            self.log_put("AUTO RAMP: thread exit.")
-
-        self.auto_ramp_thread = threading.Thread(target=worker, daemon=True)
-        self.auto_ramp_thread.start()
-
-    def _stop_auto_ramp(self, send_safe: bool):
-        if self.auto_ramp_thread and self.auto_ramp_thread.is_alive():
-            self.auto_ramp_stop.set()
-        if send_safe and self.conn:
-            self.send_stab_off()
-        self.auto_ramp_cur = 0
+            self.btn_takeoff.config(text="TAKEOFF (smooth)")
 
     def rx_loop(self):
         while self.running and self.conn:
@@ -423,30 +489,44 @@ class App:
             for cmd, payload in frames:
                 if cmd == CMD_PONG:
                     self.log_put("RX: PONG ✓")
+
                 elif cmd == CMD_PWM_ACK:
                     self.log_put("RX: PWM ACK ✓")
-                elif cmd == CMD_STAB_ACK:
-                    if len(payload) == 2:
-                        base, = struct.unpack("<H", payload)
-                        self.log_put(f"RX: STAB ACK ✓ base={base}")
-                    else:
-                        self.log_put("RX: STAB ACK ✓")
-                elif cmd == CMD_STAB_OFF_ACK:
-                    self.log_put("RX: STAB_OFF ACK ✓")
+
                 elif cmd == CMD_NAV_ACK:
                     if len(payload) == 3:
                         base, act = struct.unpack("<HB", payload)
+                        self.current_base_sent = base
                         self.log_put(f"RX: NAV ACK ✓ base={base} act={act}")
                     else:
                         self.log_put("RX: NAV ACK ✓")
+
+                elif cmd == CMD_PWM_DATA:
+                    if len(payload) == 8:
+                        lb, lf, rf, rb = struct.unpack("<HHHH", payload)
+                        self.last_pwm = {"LF": lf, "RF": rf, "LB": lb, "RB": rb}
+
+                        t = time.monotonic() - self.t0
+                        self.t_hist.append(t)
+                        self.pwm_hist["LF"].append(lf)
+                        self.pwm_hist["RF"].append(rf)
+                        self.pwm_hist["LB"].append(lb)
+                        self.pwm_hist["RB"].append(rb)
+                    else:
+                        self.log_put(f"RX: PWM DATA bad len={len(payload)}")
+
+                elif cmd == CMD_STAB_OFF_ACK:
+                    self.log_put("RX: STAB_OFF ACK ✓")
+
                 elif cmd == CMD_STATUS and len(payload) == 1:
                     err = payload[0]
                     self.log_put("RX STATUS: " + STATUS_STR.get(err, f"0x{err:02X}"))
+
                 elif cmd == CMD_IMU_DATA and len(payload) == 6:
                     roll, pitch, yaw = struct.unpack("<hhh", payload)
                     self.log_put(f"RX IMU: R={roll/100:.1f} P={pitch/100:.1f} Y={yaw/100:.1f}")
 
-            time.sleep(0.01)
+            time.sleep(0.005)
 
 def main():
     root = tk.Tk()
