@@ -24,7 +24,7 @@ typedef struct
 /* Stab payload */
 typedef struct
 {
-	uint16_t base_pwm;
+    uint16_t base_pwm;
 } StabPayload_t;
 
 #define STAB_PAYLOAD_SIZE ((uint8_t)sizeof(StabPayload_t))
@@ -66,14 +66,14 @@ typedef enum
     CMD_PWM_SET   = 0x11,
     CMD_PWM_ACK   = 0x91,
 
-	CMD_STAB_SET  = 0x12,
-	CMD_STAB_ACK  = 0x92,
+    CMD_STAB_SET  = 0x12,
+    CMD_STAB_ACK  = 0x92,
 
-	CMD_STAB_OFF  = 0x13,
-	CMD_STAB_OFF_ACK = 0x93,
+    CMD_STAB_OFF  = 0x13,
+    CMD_STAB_OFF_ACK = 0x93,
 
-	CMD_NAV_SET   = 0x14,
-	CMD_NAV_ACK	  = 0x94,
+    CMD_NAV_SET   = 0x14,
+    CMD_NAV_ACK   = 0x94,
 
     CMD_STATUS    = 0xE0,
 
@@ -120,13 +120,13 @@ typedef enum
     NAV_YAW_LEFT = 6
 } NavAction_t;
 
-typedef struct
+typedef struct __attribute__((packed))
 {
-    uint16_t base_pwm;   // 0..10000
-    uint8_t  action;     // NavAction_t
+    uint16_t base_pwm;
+    uint8_t  action;
 } NavPayload_t;
 
-#define NAV_PAYLOAD_SIZE ((uint8_t)sizeof(NavPayload_t))
+#define NAV_PAYLOAD_SIZE 3u
 
 /* ====== API ====== */
 void Protocol_Init(void);
