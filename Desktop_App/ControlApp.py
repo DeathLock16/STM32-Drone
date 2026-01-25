@@ -22,11 +22,16 @@ CMD_PONG     = 0x81
 CMD_PWM_SET  = 0x11
 CMD_PWM_ACK  = 0x91
 
-CMD_IMU_DATA = 0xA0
-CMD_STATUS   = 0xE0
+CMD_STAB_SET     = 0x12
+CMD_STAB_ACK     = 0x92
+CMD_STAB_OFF     = 0x13
+CMD_STAB_OFF_ACK = 0x93
 
 CMD_NAV_SET  = 0x14
 CMD_NAV_ACK  = 0x94
+
+CMD_IMU_DATA = 0xA0
+CMD_STATUS   = 0xE0
 
 NAV_STOP      = 0
 NAV_FORWARD   = 1
@@ -45,6 +50,9 @@ STATUS_STR = {
     0x06: "UNKNOWN_CMD",
     0x07: "IMU_NOT_READY"
 }
+
+AUTO_RAMP_HZ = 10.0
+AUTO_RAMP_RATE_PWM_PER_S = 1200.0
 
 def calc_crc(*args):
     crc = 0
@@ -90,6 +98,17 @@ def parse_stream(buf):
         frames.append((cmd, payload))
     return frames, buf
 
+def slew_int(cur: int, target: int, rate_per_s: float, dt: float) -> int:
+    if dt <= 0:
+        return cur
+    step = rate_per_s * dt
+    d = target - cur
+    if d > step:
+        d = step
+    elif d < -step:
+        d = -step
+    return int(round(cur + d))
+
 class App:
     def __init__(self, root):
         self.root = root
@@ -105,6 +124,11 @@ class App:
         self.pwm_var = tk.IntVar(value=0)
         self.last_nav_action = NAV_STOP
 
+        self.auto_ramp_var = tk.BooleanVar(value=False)
+        self.auto_ramp_thread = None
+        self.auto_ramp_stop = threading.Event()
+        self.auto_ramp_cur = 0
+
         self._build_ui()
         self._ui_poll()
 
@@ -118,7 +142,6 @@ class App:
         right = ttk.Frame(top)
         right.pack(side="right", fill="both", expand=True)
 
-        # Left: connection + slider
         conn_box = ttk.LabelFrame(left, text="Connection", padding=8)
         conn_box.pack(fill="x")
 
@@ -150,7 +173,15 @@ class App:
         self.btn_set_manual = ttk.Button(slider_box, text="Manual (PWM)", command=self.send_manual_pwm, state="disabled")
         self.btn_set_manual.pack(fill="x", pady=(6,0))
 
-        # Right: controls + logs
+        self.auto_btn = ttk.Checkbutton(
+            slider_box,
+            text="AUTO RAMP (STAB)",
+            variable=self.auto_ramp_var,
+            command=self._on_auto_ramp_toggle
+        )
+        self.auto_btn.pack(fill="x", pady=(10,0))
+        self.auto_btn.state(["disabled"])
+
         ctrl_box = ttk.LabelFrame(right, text="Controls", padding=8)
         ctrl_box.pack(fill="x")
 
@@ -192,6 +223,10 @@ class App:
         if not self.conn:
             return
 
+        if self.auto_ramp_var.get():
+            self.log_put(f"Slider target updated: {int(self.pwm_var.get())} (AUTO RAMP)")
+            return
+
         base = int(self.pwm_var.get())
         action = int(self.last_nav_action)
 
@@ -223,9 +258,17 @@ class App:
     def set_connected(self, connected: bool):
         self.lbl_state.config(text="State: CONNECTED" if connected else "State: DISCONNECTED")
         state = "normal" if connected else "disabled"
+
         for b in [self.btn_ping, self.btn_set_manual, self.btn_yawl, self.btn_fwd, self.btn_yawr,
                   self.btn_left, self.btn_stop, self.btn_right, self.btn_back]:
             b.config(state=state)
+
+        if connected:
+            self.auto_btn.state(["!disabled"])
+        else:
+            self._stop_auto_ramp(send_safe=False)
+            self.auto_ramp_var.set(False)
+            self.auto_btn.state(["disabled"])
 
     def start_server(self):
         if self.running:
@@ -255,6 +298,7 @@ class App:
                 self.log_put(f"Server error: {e}")
             finally:
                 self.running = False
+                self._stop_auto_ramp(send_safe=False)
                 try:
                     if self.conn:
                         self.conn.close()
@@ -287,12 +331,19 @@ class App:
         self.log_put("TX: PING")
 
     def send_manual_pwm(self):
+        if self.auto_ramp_var.get():
+            self.log_put("Manual PWM blocked (AUTO RAMP is ON).")
+            return
         val = int(self.pwm_var.get())
         payload = struct.pack("<HHHH", val, val, val, val)
         self.send(build_frame(CMD_PWM_SET, payload))
         self.log_put(f"TX: MANUAL PWM={val}")
 
     def send_nav(self, action):
+        if self.auto_ramp_var.get():
+            self.log_put("NAV blocked (AUTO RAMP is ON). Toggle it OFF to use arrows.")
+            return
+
         base = int(self.pwm_var.get())
         self.last_nav_action = action
         payload = struct.pack("<HB", base, action)
@@ -302,6 +353,57 @@ class App:
             NAV_LEFT:"LEFT", NAV_YAW_RIGHT:"YAW_R", NAV_YAW_LEFT:"YAW_L"
         }.get(action, str(action))
         self.log_put(f"TX: NAV {name} base={base}")
+
+    def send_stab_off(self):
+        self.send(build_frame(CMD_STAB_OFF, b""))
+        self.log_put("TX: STAB_OFF (PWM_SetSafe)")
+
+    def _on_auto_ramp_toggle(self):
+        if self.auto_ramp_var.get():
+            if not self.conn:
+                self.auto_ramp_var.set(False)
+                return
+            self._start_auto_ramp()
+        else:
+            self._stop_auto_ramp(send_safe=True)
+
+    def _start_auto_ramp(self):
+        if self.auto_ramp_thread and self.auto_ramp_thread.is_alive():
+            return
+
+        self.auto_ramp_stop.clear()
+        self.last_nav_action = NAV_STOP
+
+        self.auto_ramp_cur = 0
+        self.log_put("AUTO RAMP: ON (NAV_STOP). Using slider as target PWM.")
+
+        def worker():
+            last_t = time.time()
+            while self.running and self.conn and (not self.auto_ramp_stop.is_set()):
+                now = time.time()
+                dt = now - last_t
+                last_t = now
+
+                target = int(self.pwm_var.get())
+                self.auto_ramp_cur = slew_int(self.auto_ramp_cur, target, AUTO_RAMP_RATE_PWM_PER_S, dt)
+                base = int(max(0, min(10000, self.auto_ramp_cur)))
+
+                payload = struct.pack("<HB", base, NAV_STOP)
+                self.send(build_frame(CMD_NAV_SET, payload))
+
+                time.sleep(1.0 / AUTO_RAMP_HZ)
+
+            self.log_put("AUTO RAMP: thread exit.")
+
+        self.auto_ramp_thread = threading.Thread(target=worker, daemon=True)
+        self.auto_ramp_thread.start()
+
+    def _stop_auto_ramp(self, send_safe: bool):
+        if self.auto_ramp_thread and self.auto_ramp_thread.is_alive():
+            self.auto_ramp_stop.set()
+        if send_safe and self.conn:
+            self.send_stab_off()
+        self.auto_ramp_cur = 0
 
     def rx_loop(self):
         while self.running and self.conn:
@@ -323,6 +425,14 @@ class App:
                     self.log_put("RX: PONG ✓")
                 elif cmd == CMD_PWM_ACK:
                     self.log_put("RX: PWM ACK ✓")
+                elif cmd == CMD_STAB_ACK:
+                    if len(payload) == 2:
+                        base, = struct.unpack("<H", payload)
+                        self.log_put(f"RX: STAB ACK ✓ base={base}")
+                    else:
+                        self.log_put("RX: STAB ACK ✓")
+                elif cmd == CMD_STAB_OFF_ACK:
+                    self.log_put("RX: STAB_OFF ACK ✓")
                 elif cmd == CMD_NAV_ACK:
                     if len(payload) == 3:
                         base, act = struct.unpack("<HB", payload)

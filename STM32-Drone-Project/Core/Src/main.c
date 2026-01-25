@@ -104,31 +104,30 @@ typedef enum {
 #define LEVEL_CALIB_GYRO_MAX_DPS   2.5f
 #define LEVEL_CALIB_ACC_OK_REQUIRED 1
 
-/* USER CHANGE:
-   Kompensacja cięższego przodu (nose-down) bez “stałego przechyłu”.
-   + wartość => przód (LF/RF) dostaje więcej, tył (LB/RB) mniej -> moment nose-up.
-   Zacznij od 200..400. Jeśli nadal po oderwaniu pochyla do przodu -> zwiększ.
-   Jeśli zacznie ciągnąć do tyłu / nose-up -> zmniejsz lub daj minus. */
 #define CG_PITCH_BIAS_PWM   250
 #define CG_ROLL_BIAS_PWM    0
-
-/* USER CHANGE:
-   Żeby nie pełzał po ziemi, bias rośnie stopniowo dopiero od pewnej bazy. */
 #define CG_BIAS_START_PWM   5600u
 #define CG_BIAS_FULL_PWM    7600u
 
-/* USER CHANGE:
-   Integratory włączamy trochę wcześniej (żeby szybciej “złapały” moment CG po oderwaniu),
-   ale nadal wyłączamy je przy bardzo niskim gazie, żeby nie pompowały na ziemi. */
 #define I_ENABLE_BASE_PWM   5200u
 #define I_DISABLE_BASE_PWM  4500u
+
+/* USER CHANGE:
+   Jeśli quad "siada" zawsze na rogu RF i kręci się wokół tego silnika,
+   to niemal zawsze oznacza: RF ma słabszy ciąg (motor/ESC/śmigło) albo róg jest cięższy.
+   Ten trim podnosi RF i jednocześnie trochę odejmuje z pozostałych trzech (żeby suma ciągu nie rosła mocno).
+   Zacznij od 250..450. Jeśli dalej siada na RF -> zwiększ. Jeśli zacznie uciekać od RF -> zmniejsz. */
+#define RF_CORNER_TRIM_PWM     450
+
+/* USER CHANGE:
+   Żeby nie "pełzał" po ziemi, RF trim rośnie stopniowo dopiero od pewnej bazy. */
+#define RF_TRIM_START_PWM      5600u
+#define RF_TRIM_FULL_PWM       7600u
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 /* USER CODE END PM */
-
-/* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
 MPU6050_t imu;
@@ -295,13 +294,21 @@ static float Mixer_ComputeScale(int32_t base, float c_lf, float c_rf, float c_lb
     return k;
 }
 
-/* USER CHANGE: ramp dla CG bias */
 static float CgBiasScale(uint16_t base_pwm)
 {
     if (base_pwm <= CG_BIAS_START_PWM) return 0.0f;
     if (base_pwm >= CG_BIAS_FULL_PWM)  return 1.0f;
     return ((float)base_pwm - (float)CG_BIAS_START_PWM) /
            ((float)CG_BIAS_FULL_PWM  - (float)CG_BIAS_START_PWM);
+}
+
+/* USER CHANGE: ramp dla RF corner trim */
+static float RfTrimScale(uint16_t base_pwm)
+{
+    if (base_pwm <= RF_TRIM_START_PWM) return 0.0f;
+    if (base_pwm >= RF_TRIM_FULL_PWM)  return 1.0f;
+    return ((float)base_pwm - (float)RF_TRIM_START_PWM) /
+           ((float)RF_TRIM_FULL_PWM  - (float)RF_TRIM_START_PWM);
 }
 /* USER CODE END PFP */
 
@@ -754,7 +761,6 @@ static void ControlStep_Stabilize(void)
         default: break;
     }
 
-    /* USER CHANGE: CG bias rampowany od bazy */
     float cgk = CgBiasScale(g_stab_base_pwm);
     float pitch_bias = (float)CG_PITCH_BIAS_PWM * cgk;
     float roll_bias  = (float)CG_ROLL_BIAS_PWM  * cgk;
@@ -768,11 +774,6 @@ static void ControlStep_Stabilize(void)
     c_lb += roll_bias;
     c_rf -= roll_bias;
     c_rb -= roll_bias;
-
-    c_lf *= M_LF;
-    c_rf *= M_RF;
-    c_lb *= M_LB;
-    c_rb *= M_RB;
 
     float k = Mixer_ComputeScale(base, c_lf, c_rf, c_lb, c_rb);
     int sat = (k < 0.999f) ? 1 : 0;
@@ -798,6 +799,23 @@ static void ControlStep_Stabilize(void)
     int32_t lb = base + (int32_t)lroundf(k * c_lb);
     int32_t rb = base + (int32_t)lroundf(k * c_rb);
 
+    /* USER CHANGE: RF corner trim (podbij RF, odejmij z pozostałych) */
+    float rftk = RfTrimScale(g_stab_base_pwm);
+    int32_t rf_trim = (int32_t)lroundf((float)RF_CORNER_TRIM_PWM * rftk);
+    if (rf_trim != 0)
+    {
+        int32_t sub = (int32_t)lroundf((float)rf_trim / 3.0f);
+        rf += rf_trim;
+        lf -= sub;
+        lb -= sub;
+        rb -= sub;
+    }
+
+    lf = (int32_t)lroundf((float)lf * M_LF);
+    rf = (int32_t)lroundf((float)rf * M_RF);
+    lb = (int32_t)lroundf((float)lb * M_LB);
+    rb = (int32_t)lroundf((float)rb * M_RB);
+
     PwmPayload_t out;
     out.motor_lf = clamp_u16(lf, PWM_STAB_FLOOR, PWM_MAX);
     out.motor_rf = clamp_u16(rf, PWM_STAB_FLOOR, PWM_MAX);
@@ -808,10 +826,6 @@ static void ControlStep_Stabilize(void)
 }
 /* USER CODE END 0 */
 
-/**
-  * @brief  The application entry point.
-  * @retval int
-  */
 int main(void)
 {
   HAL_Init();
@@ -822,7 +836,6 @@ int main(void)
   MX_TIM1_Init();
   MX_USART6_UART_Init();
 
-  /* USER CODE BEGIN 2 */
   PWM_StartAll();
   PWM_SetSafe();
 
@@ -836,7 +849,6 @@ int main(void)
   HAL_UART_AbortReceive(&huart6);
   __HAL_UART_CLEAR_OREFLAG(&huart6);
   HAL_UART_Receive_IT(&huart6, &uart_rx_it_byte, 1);
-  /* USER CODE END 2 */
 
   while (1)
   {
@@ -992,10 +1004,10 @@ int main(void)
             g_last_nav_action = np.action;
             g_nav_bias = 0;
 
-            i_roll = 0.0f;
-            i_pitch = 0.0f;
-            i_yaw = 0.0f;
-            g_i_enabled = 0;
+            /* USER CHANGE:
+               NIE zerujemy integratorów przy każdym NAV_SET.
+               Dzięki temu regulator "nauczy się" stałych biasów (np. słabszy RF / cięższy róg),
+               zwłaszcza gdy aplikacja wysyła NAV_SET często (auto ramp). */
 
             g_target_cmd_roll_deg  = 0.0f;
             g_target_cmd_pitch_deg = 0.0f;
@@ -1060,10 +1072,6 @@ int main(void)
   }
 }
 
-/**
-  * @brief System Clock Configuration
-  * @retval None
-  */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -1120,12 +1128,10 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 
 void Error_Handler(void)
 {
-  /* USER CODE BEGIN Error_Handler_Debug */
   __disable_irq();
   while (1)
   {
   }
-  /* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT
