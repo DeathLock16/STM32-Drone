@@ -39,8 +39,8 @@ typedef enum {
 #define IMU_UPDATE_PERIOD_MS 10u
 
 #define ACC_LPF_CUTOFF_HZ  20.0f
-#define ACC_G_MIN          0.80f
-#define ACC_G_MAX          1.20f
+#define ACC_G_MIN          0.60f
+#define ACC_G_MAX          1.40f
 
 #define TILT_KILL_DEG      35.0f
 #define TILT_UNKILL_DEG    25.0f
@@ -53,22 +53,23 @@ typedef enum {
 
 #define STAB_KP_ROLL   12.0f
 #define STAB_KD_ROLL   1.8f
-#define STAB_KI_ROLL   0.0f
+#define STAB_KI_ROLL   0.2f
 
 #define STAB_KP_PITCH  12.0f
 #define STAB_KD_PITCH  1.8f
-#define STAB_KI_PITCH  0.0f
+#define STAB_KI_PITCH  0.2f
 
-#define STAB_KP_YAW_RATE  2.0f
-#define STAB_KI_YAW_RATE  0.0f
+#define STAB_KP_YAW_RATE  3.50f
+#define STAB_KI_YAW_RATE  0.05f
 
 #define STAB_I_MAX    200.0f
 
 #define STAB_KFF_YAW      0.0f
 #define STAB_YAW_SIGN     -1.0f
-#define STAB_YAW_MAX      300.0f
-#define STAB_YAW_I_MAX    200.0f
+#define STAB_YAW_MAX      450.0f
+#define STAB_YAW_I_MAX    300.0f
 
+#define YAW_CCW_IS_RF_LB  1
 /* TWOJE OBSERWACJE:
    Prawo => dodatnie PITCH, Lewo => ujemne PITCH
    Tył   => dodatni  ROLL,  Przód => ujemny ROLL
@@ -86,11 +87,11 @@ typedef enum {
 #define STAB_U_MAX        1400.0f
 
 #define NAV_TILT_DEG        10.0f
-#define NAV_YAW_RATE_DPS   120.0f
+#define NAV_YAW_RATE_DPS   180.0f
 #define NAV_THRUST_BIAS     0
 
 #define CMD_TILT_SLEW_DEG_PER_S      80.0f
-#define CMD_YAW_SLEW_DPS_PER_S      600.0f
+#define CMD_YAW_SLEW_DPS_PER_S      900.0f
 #define BASE_SLEW_PWM_PER_S       25000.0f
 #define NAV_BIAS_SLEW_PWM_PER_S    6000.0f
 
@@ -115,7 +116,7 @@ typedef enum {
 #define LEVEL_CALIB_GYRO_MAX_DPS   2.5f
 #define LEVEL_CALIB_ACC_OK_REQUIRED 1
 
-#define CG_PITCH_BIAS_PWM   0
+#define CG_PITCH_BIAS_PWM   100
 #define CG_ROLL_BIAS_PWM    0
 
 #define CG_BIAS_START_PWM   5600u
@@ -675,6 +676,7 @@ static void ControlStep_Stabilize(void)
     u_roll_pd  = clamp_f(u_roll_pd,  -STAB_U_MAX, STAB_U_MAX);
     u_pitch_pd = clamp_f(u_pitch_pd, -STAB_U_MAX, STAB_U_MAX);
 
+    // ---- YAW RATE CONTROLLER ----
     float yaw_rate = (float)g_gyro_yaw_dps * STAB_YAW_SIGN;
     float yaw_cmd  = (float)g_cmd_yaw_rate_dps * STAB_YAW_SIGN;
     float yaw_rate_err = yaw_cmd - yaw_rate;
@@ -682,11 +684,13 @@ static void ControlStep_Stabilize(void)
     float u_yaw = STAB_KP_YAW_RATE * yaw_rate_err
                 + STAB_KI_YAW_RATE * i_yaw
                 + STAB_KFF_YAW * yaw_cmd;
+
     u_yaw = clamp_f(u_yaw, -STAB_YAW_MAX, STAB_YAW_MAX);
 
     float u_yaw_total = u_yaw + YAW_TRIM;
     u_yaw_total = clamp_f(u_yaw_total, -STAB_YAW_MAX, STAB_YAW_MAX);
 
+    // ---- ROLL/PITCH with I ----
     float u_roll  = u_roll_pd  + STAB_KI_ROLL  * i_roll;
     float u_pitch = u_pitch_pd + STAB_KI_PITCH * i_pitch;
 
@@ -695,20 +699,13 @@ static void ControlStep_Stabilize(void)
 
     int32_t base = (int32_t)g_stab_base_pwm;
 
-    float c_lf, c_rf, c_lb, c_rb;
+    // ---- MIX: roll/pitch first ----
+    float c_lf = (u_pitch + u_roll);
+    float c_rf = (u_pitch - u_roll);
+    float c_lb = (-u_pitch + u_roll);
+    float c_rb = (-u_pitch - u_roll);
 
-#if YAW_MIX_FRONT_CCW_REAR_CW
-    c_lf = (u_pitch + u_roll + u_yaw_total);
-    c_rf = (u_pitch - u_roll + u_yaw_total);
-    c_lb = (-u_pitch + u_roll - u_yaw_total);
-    c_rb = (-u_pitch - u_roll - u_yaw_total);
-#else
-    c_lf = (u_pitch + u_roll - u_yaw_total);
-    c_rf = (u_pitch - u_roll + u_yaw_total);
-    c_lb = (-u_pitch + u_roll + u_yaw_total);
-    c_rb = (-u_pitch - u_roll - u_yaw_total);
-#endif
-
+    // ---- NAV bias (as you had) ----
     int32_t nav = g_nav_bias;
     switch ((uint8_t)g_last_nav_action)
     {
@@ -719,6 +716,7 @@ static void ControlStep_Stabilize(void)
         default: break;
     }
 
+    // ---- CG bias ----
     float cgk = CgBiasScale(g_stab_base_pwm);
     float pitch_bias = (float)CG_PITCH_BIAS_PWM * cgk;
     float roll_bias  = (float)CG_ROLL_BIAS_PWM  * cgk;
@@ -733,9 +731,27 @@ static void ControlStep_Stabilize(void)
     c_rf -= roll_bias;
     c_rb -= roll_bias;
 
+    // ---- YAW MIX: BY DIAGONAL, zgodnie z Twoimi kierunkami ----
+#if YAW_CCW_IS_RF_LB
+    // CCW: RF + LB => +yaw
+    // CW : LF + RB => -yaw
+    c_rf += u_yaw_total;
+    c_lb += u_yaw_total;
+    c_lf -= u_yaw_total;
+    c_rb -= u_yaw_total;
+#else
+    // Gdyby kiedyś okazało się, że CCW jest LF+RB:
+    c_lf += u_yaw_total;
+    c_rb += u_yaw_total;
+    c_rf -= u_yaw_total;
+    c_lb -= u_yaw_total;
+#endif
+
+    // ---- Saturation scale ----
     float k = Mixer_ComputeScale(base, c_lf, c_rf, c_lb, c_rb);
     int sat = (k < 0.999f) ? 1 : 0;
 
+    // ---- Integrators ----
     if (!sat && g_i_enabled)
     {
         i_roll  += err_roll  * dt;
@@ -756,6 +772,7 @@ static void ControlStep_Stabilize(void)
         }
     }
 
+    // ---- Apply ----
     float out_lf_f = ((float)base + k * c_lf) * MOTOR_GAIN_LF + MOTOR_OFFS_LF;
     float out_rf_f = ((float)base + k * c_rf) * MOTOR_GAIN_RF + MOTOR_OFFS_RF;
     float out_lb_f = ((float)base + k * c_lb) * MOTOR_GAIN_LB + MOTOR_OFFS_LB;
@@ -774,6 +791,7 @@ static void ControlStep_Stabilize(void)
 
     SetPwm(&out);
 }
+
 /* USER CODE END 0 */
 
 /**
