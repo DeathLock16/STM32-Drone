@@ -59,36 +59,20 @@ typedef enum {
 #define STAB_KD_PITCH  1.8f
 #define STAB_KI_PITCH  0.2f
 
-#define STAB_KP_YAW_RATE  3.50f
 #define STAB_KI_YAW_RATE  0.05f
 
 #define STAB_I_MAX    200.0f
 
 #define STAB_KFF_YAW      0.0f
 #define STAB_YAW_SIGN     -1.0f
-#define STAB_YAW_MAX      450.0f
 #define STAB_YAW_I_MAX    300.0f
 
 #define YAW_CCW_IS_RF_LB  1
-/* TWOJE OBSERWACJE:
-   Prawo => dodatnie PITCH, Lewo => ujemne PITCH
-   Tył   => dodatni  ROLL,  Przód => ujemny ROLL
-   To oznacza: roll/pitch są zamienione względem osi drona (rotacja IMU o 90°).
-*/
+
 #define IMU_SWAP_ROLL_PITCH  1
 
-/* Po swapie:
-   - ROLL kontrolera (lewo/prawo) bierzemy z IMU_PITCH
-   - PITCH kontrolera (przód/tył) bierzemy z IMU_ROLL
-   Znaki wg Twoich obserwacji wychodzą dodatnie, więc startowo +1. */
 #define STAB_ROLL_SIGN    1.0f
 #define STAB_PITCH_SIGN   1.0f
-
-#define STAB_U_MAX        1400.0f
-
-#define NAV_TILT_DEG        10.0f
-#define NAV_YAW_RATE_DPS   180.0f
-#define NAV_THRUST_BIAS     0
 
 #define CMD_TILT_SLEW_DEG_PER_S      80.0f
 #define CMD_YAW_SLEW_DPS_PER_S      900.0f
@@ -116,7 +100,7 @@ typedef enum {
 #define LEVEL_CALIB_GYRO_MAX_DPS   2.5f
 #define LEVEL_CALIB_ACC_OK_REQUIRED 1
 
-#define CG_PITCH_BIAS_PWM   100
+#define CG_PITCH_BIAS_PWM   -100
 #define CG_ROLL_BIAS_PWM    0
 
 #define CG_BIAS_START_PWM   5600u
@@ -124,6 +108,31 @@ typedef enum {
 
 #define I_ENABLE_BASE_PWM   6500u
 #define I_DISABLE_BASE_PWM  6000u
+
+// =========================
+// PROFILE SWITCH
+// =========================
+#define CONTROL_PROFILE_GROUND_TEST  1
+
+#if CONTROL_PROFILE_GROUND_TEST
+    #define NAV_TILT_DEG         20.0f
+    #define NAV_YAW_RATE_DPS    360.0f
+    #define NAV_THRUST_BIAS      700
+    #define NAV_MIX_GAIN         2.0f
+
+    #define STAB_U_MAX           2800.0f
+    #define STAB_YAW_MAX          900.0f
+    #define STAB_KP_YAW_RATE        6.0f
+#else
+    #define NAV_TILT_DEG         10.0f
+    #define NAV_YAW_RATE_DPS    180.0f
+    #define NAV_THRUST_BIAS        0
+    #define NAV_MIX_GAIN         1.0f
+
+    #define STAB_U_MAX           1400.0f
+    #define STAB_YAW_MAX          450.0f
+    #define STAB_KP_YAW_RATE       3.50f
+#endif
 /* USER CODE END PD */
 
 /* Private variables ---------------------------------------------------------*/
@@ -676,7 +685,6 @@ static void ControlStep_Stabilize(void)
     u_roll_pd  = clamp_f(u_roll_pd,  -STAB_U_MAX, STAB_U_MAX);
     u_pitch_pd = clamp_f(u_pitch_pd, -STAB_U_MAX, STAB_U_MAX);
 
-    // ---- YAW RATE CONTROLLER ----
     float yaw_rate = (float)g_gyro_yaw_dps * STAB_YAW_SIGN;
     float yaw_cmd  = (float)g_cmd_yaw_rate_dps * STAB_YAW_SIGN;
     float yaw_rate_err = yaw_cmd - yaw_rate;
@@ -690,7 +698,6 @@ static void ControlStep_Stabilize(void)
     float u_yaw_total = u_yaw + YAW_TRIM;
     u_yaw_total = clamp_f(u_yaw_total, -STAB_YAW_MAX, STAB_YAW_MAX);
 
-    // ---- ROLL/PITCH with I ----
     float u_roll  = u_roll_pd  + STAB_KI_ROLL  * i_roll;
     float u_pitch = u_pitch_pd + STAB_KI_PITCH * i_pitch;
 
@@ -699,24 +706,21 @@ static void ControlStep_Stabilize(void)
 
     int32_t base = (int32_t)g_stab_base_pwm;
 
-    // ---- MIX: roll/pitch first ----
     float c_lf = (u_pitch + u_roll);
     float c_rf = (u_pitch - u_roll);
     float c_lb = (-u_pitch + u_roll);
     float c_rb = (-u_pitch - u_roll);
 
-    // ---- NAV bias (as you had) ----
-    int32_t nav = g_nav_bias;
+    float nav = (float)g_nav_bias * NAV_MIX_GAIN;
     switch ((uint8_t)g_last_nav_action)
     {
-        case NAV_FORWARD: c_lb += (float)nav; c_rb += (float)nav; c_lf -= (float)nav; c_rf -= (float)nav; break;
-        case NAV_BACK:    c_lb -= (float)nav; c_rb -= (float)nav; c_lf += (float)nav; c_rf += (float)nav; break;
-        case NAV_LEFT:    c_rb += (float)nav; c_rf += (float)nav; c_lb -= (float)nav; c_lf -= (float)nav; break;
-        case NAV_RIGHT:   c_lb += (float)nav; c_lf += (float)nav; c_rb -= (float)nav; c_rf -= (float)nav; break;
+        case NAV_FORWARD: c_lb += nav; c_rb += nav; c_lf -= nav; c_rf -= nav; break;
+        case NAV_BACK:    c_lb -= nav; c_rb -= nav; c_lf += nav; c_rf += nav; break;
+        case NAV_LEFT:    c_rb += nav; c_rf += nav; c_lb -= nav; c_lf -= nav; break;
+        case NAV_RIGHT:   c_lb += nav; c_lf += nav; c_rb -= nav; c_rf -= nav; break;
         default: break;
     }
 
-    // ---- CG bias ----
     float cgk = CgBiasScale(g_stab_base_pwm);
     float pitch_bias = (float)CG_PITCH_BIAS_PWM * cgk;
     float roll_bias  = (float)CG_ROLL_BIAS_PWM  * cgk;
@@ -731,27 +735,21 @@ static void ControlStep_Stabilize(void)
     c_rf -= roll_bias;
     c_rb -= roll_bias;
 
-    // ---- YAW MIX: BY DIAGONAL, zgodnie z Twoimi kierunkami ----
 #if YAW_CCW_IS_RF_LB
-    // CCW: RF + LB => +yaw
-    // CW : LF + RB => -yaw
     c_rf += u_yaw_total;
     c_lb += u_yaw_total;
     c_lf -= u_yaw_total;
     c_rb -= u_yaw_total;
 #else
-    // Gdyby kiedyś okazało się, że CCW jest LF+RB:
     c_lf += u_yaw_total;
     c_rb += u_yaw_total;
     c_rf -= u_yaw_total;
     c_lb -= u_yaw_total;
 #endif
 
-    // ---- Saturation scale ----
     float k = Mixer_ComputeScale(base, c_lf, c_rf, c_lb, c_rb);
     int sat = (k < 0.999f) ? 1 : 0;
 
-    // ---- Integrators ----
     if (!sat && g_i_enabled)
     {
         i_roll  += err_roll  * dt;
@@ -772,7 +770,6 @@ static void ControlStep_Stabilize(void)
         }
     }
 
-    // ---- Apply ----
     float out_lf_f = ((float)base + k * c_lf) * MOTOR_GAIN_LF + MOTOR_OFFS_LF;
     float out_rf_f = ((float)base + k * c_rf) * MOTOR_GAIN_RF + MOTOR_OFFS_RF;
     float out_lb_f = ((float)base + k * c_lb) * MOTOR_GAIN_LB + MOTOR_OFFS_LB;
@@ -792,12 +789,6 @@ static void ControlStep_Stabilize(void)
     SetPwm(&out);
 }
 
-/* USER CODE END 0 */
-
-/**
-  * @brief  The application entry point.
-  * @retval int
-  */
 int main(void)
 {
   HAL_Init();
@@ -917,9 +908,8 @@ int main(void)
           else
           {
             TelemetryPayload_t tp;
-
-            tp.imu = g_imu_last;      // snapshot IMU
-            ReadPwm(&tp.pwm);         // snapshot PWM
+            tp.imu = g_imu_last;
+            ReadPwm(&tp.pwm);
 
             tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_TELEM_DATA,
                                          (const uint8_t*)&tp, TELEM_PAYLOAD_SIZE,
@@ -1010,8 +1000,11 @@ int main(void)
               case NAV_BACK:      g_target_cmd_pitch_deg = +NAV_TILT_DEG; break;
               case NAV_LEFT:      g_target_cmd_roll_deg  = -NAV_TILT_DEG; break;
               case NAV_RIGHT:     g_target_cmd_roll_deg  = +NAV_TILT_DEG; break;
-              case NAV_YAW_LEFT:  g_target_cmd_yaw_rate_dps = -NAV_YAW_RATE_DPS; break;
-              case NAV_YAW_RIGHT: g_target_cmd_yaw_rate_dps = +NAV_YAW_RATE_DPS; break;
+
+              // FIX: yaw left/right were swapped in behavior -> swap signs here
+              case NAV_YAW_LEFT:  g_target_cmd_yaw_rate_dps = +NAV_YAW_RATE_DPS; break;
+              case NAV_YAW_RIGHT: g_target_cmd_yaw_rate_dps = -NAV_YAW_RATE_DPS; break;
+
               default: break;
             }
 
