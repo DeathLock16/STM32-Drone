@@ -6,7 +6,9 @@ import queue
 import tkinter as tk
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
+from tkinter import filedialog, messagebox
 from collections import deque
+import csv
 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -50,6 +52,16 @@ NAV_BACK      = 3
 NAV_LEFT      = 4
 NAV_YAW_RIGHT = 5
 NAV_YAW_LEFT  = 6
+
+NAV_STR = {
+    NAV_STOP: "STOP",
+    NAV_FORWARD: "FORWARD",
+    NAV_RIGHT: "RIGHT",
+    NAV_BACK: "BACK",
+    NAV_LEFT: "LEFT",
+    NAV_YAW_RIGHT: "YAW_RIGHT",
+    NAV_YAW_LEFT: "YAW_LEFT"
+}
 
 STATUS_STR = {
     0x01: "BAD_START",
@@ -151,6 +163,11 @@ class App:
         self.pitch_var = tk.StringVar(value="PITCH: --.-°")
         self.yaw_var = tk.StringVar(value="YAW: --.-°")
 
+        # ---- DATA LOGGING ----
+        self.data_lock = threading.Lock()
+        self.data_rows = []
+        self.last_imu = {"roll": None, "pitch": None, "yaw": None}
+
         self._build_ui()
         self._ui_poll()
         self._plot_update()
@@ -198,6 +215,9 @@ class App:
 
         self.btn_takeoff = ttk.Button(slider_box, text="TAKEOFF (smooth)", command=self.toggle_takeoff, state="disabled")
         self.btn_takeoff.pack(fill="x", pady=(6,0))
+
+        self.btn_export = ttk.Button(slider_box, text="Export CSV", command=self.export_csv, state="disabled")
+        self.btn_export.pack(fill="x", pady=(12,0))
 
         top_right = ttk.Frame(right)
         top_right.pack(fill="both", expand=True)
@@ -319,7 +339,8 @@ class App:
         state = "normal" if connected else "disabled"
         for b in [self.btn_ping, self.btn_set_manual, self.btn_takeoff,
                   self.btn_yawl, self.btn_fwd, self.btn_yawr,
-                  self.btn_left, self.btn_stop, self.btn_right, self.btn_back]:
+                  self.btn_left, self.btn_stop, self.btn_right, self.btn_back,
+                  self.btn_export]:
             b.config(state=state)
 
     def start_server(self):
@@ -485,6 +506,68 @@ class App:
 
             self.btn_takeoff.config(text="TAKEOFF (smooth)")
 
+    def _append_telem_row(self, t_s, roll, pitch, yaw, lf, rf, lb, rb):
+        with self.data_lock:
+            self.data_rows.append({
+                "t_s": t_s,
+                "base": int(self.current_base_sent),
+                "action": int(self.desired_action),
+                "action_name": NAV_STR.get(int(self.desired_action), str(int(self.desired_action))),
+                "takeoff_on": int(self.takeoff_on),
+
+                "roll_deg": float(roll),
+                "pitch_deg": float(pitch),
+                "yaw_deg": float(yaw),
+
+                "pwm_lf": int(lf),
+                "pwm_rf": int(rf),
+                "pwm_lb": int(lb),
+                "pwm_rb": int(rb),
+            })
+
+    def export_csv(self):
+        with self.data_lock:
+            rows = list(self.data_rows)
+
+        if not rows:
+            messagebox.showinfo("Export CSV", "Brak danych do eksportu (jeszcze nic nie przyszło z telemetrii).")
+            return
+
+        default_name = time.strftime("drone_log_%Y-%m-%d_%H-%M-%S.csv")
+        path = filedialog.asksaveasfilename(
+            defaultextension=".csv",
+            initialfile=default_name,
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+        )
+        if not path:
+            return
+
+        fieldnames = [
+            "t_s",
+            "base",
+            "action",
+            "action_name",
+            "takeoff_on",
+            "roll_deg",
+            "pitch_deg",
+            "yaw_deg",
+            "pwm_lf",
+            "pwm_rf",
+            "pwm_lb",
+            "pwm_rb",
+        ]
+
+        try:
+            with open(path, "w", newline="", encoding="utf-8") as f:
+                w = csv.DictWriter(f, fieldnames=fieldnames)
+                w.writeheader()
+                for r in rows:
+                    w.writerow(r)
+
+            self.log_put(f"EXPORT: zapisano {len(rows)} wierszy do: {path}")
+        except Exception as e:
+            messagebox.showerror("Export CSV", f"Nie udało się zapisać CSV:\n{e}")
+
     def rx_loop(self):
         while self.running and self.conn:
             try:
@@ -538,7 +621,11 @@ class App:
 
                 elif cmd == CMD_IMU_DATA and len(payload) == 6:
                     roll, pitch, yaw = struct.unpack("<hhh", payload)
-                    self.log_put(f"RX IMU: R={roll/100:.1f} P={pitch/100:.1f} Y={yaw/100:.1f}")
+                    r = roll / 100.0
+                    p = pitch / 100.0
+                    y = yaw / 100.0
+                    self.last_imu = {"roll": r, "pitch": p, "yaw": y}
+                    self.log_put(f"RX IMU: R={r:.1f} P={p:.1f} Y={y:.1f}")
 
                 elif cmd == CMD_TELEM_DATA:
                     if len(payload) == 14:
@@ -547,6 +634,7 @@ class App:
                         r = roll / 100.0
                         p = pitch / 100.0
                         y = yaw / 100.0
+                        self.last_imu = {"roll": r, "pitch": p, "yaw": y}
 
                         self.root.after(0, lambda rr=r, pp=p, yy=y: (
                             self.roll_var.set(f"ROLL: {rr:+.1f}°"),
@@ -562,9 +650,11 @@ class App:
                         self.pwm_hist["RF"].append(rf)
                         self.pwm_hist["LB"].append(lb)
                         self.pwm_hist["RB"].append(rb)
+
+                        self._append_telem_row(t, r, p, y, lf, rf, lb, rb)
                     else:
                         self.log_put(f"RX: TELEM bad len={len(payload)}")
-                        
+
             time.sleep(0.005)
 
 def main():

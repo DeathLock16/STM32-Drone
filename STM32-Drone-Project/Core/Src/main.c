@@ -112,7 +112,7 @@ typedef enum {
 // =========================
 // PROFILE SWITCH
 // =========================
-#define CONTROL_PROFILE_GROUND_TEST  1
+#define CONTROL_PROFILE_GROUND_TEST  0
 
 #if CONTROL_PROFILE_GROUND_TEST
     #define NAV_TILT_DEG         20.0f
