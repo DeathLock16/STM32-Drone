@@ -4,8 +4,8 @@
 ../Core/Src/main.c:334:12:ESP_WaitFor	96	static
 ../Core/Src/main.c:312:5:_write	8	static
 ../Core/Src/main.c:367:6:ESP_Init	24	static
-../Core/Src/main.c:1037:6:SystemClock_Config	88	static,ignoring_inline_asm
-../Core/Src/main.c:792:5:main	184	static,ignoring_inline_asm
-../Core/Src/main.c:1061:6:HAL_UART_RxCpltCallback	4	static
-../Core/Src/main.c:1070:6:HAL_UART_ErrorCallback	24	static
-../Core/Src/main.c:1085:6:Error_Handler	0	static,ignoring_inline_asm
+../Core/Src/main.c:1036:6:SystemClock_Config	88	static,ignoring_inline_asm
+../Core/Src/main.c:790:5:main	184	static,ignoring_inline_asm
+../Core/Src/main.c:1060:6:HAL_UART_RxCpltCallback	4	static
+../Core/Src/main.c:1069:6:HAL_UART_ErrorCallback	24	static
+../Core/Src/main.c:1084:6:Error_Handler	0	static,ignoring_inline_asm

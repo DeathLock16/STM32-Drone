@@ -39,8 +39,8 @@ typedef enum {
 #define IMU_UPDATE_PERIOD_MS 10u
 
 #define ACC_LPF_CUTOFF_HZ  20.0f
-#define ACC_G_MIN          0.60f
-#define ACC_G_MAX          1.40f
+#define ACC_G_MIN          0.40f
+#define ACC_G_MAX          2.00f
 
 #define TILT_KILL_DEG      35.0f
 #define TILT_UNKILL_DEG    25.0f
@@ -51,28 +51,28 @@ typedef enum {
 #define PWM_MAX 10000
 #define PWM_STAB_FLOOR 500
 
-#define STAB_KP_ROLL   12.0f
-#define STAB_KD_ROLL   1.8f
-#define STAB_KI_ROLL   0.2f
+#define STAB_KP_ROLL   9.0f
+#define STAB_KD_ROLL   1.2f
+#define STAB_KI_ROLL   0.25f
 
-#define STAB_KP_PITCH  12.0f
-#define STAB_KD_PITCH  1.8f
-#define STAB_KI_PITCH  0.2f
+#define STAB_KP_PITCH  9.0f
+#define STAB_KD_PITCH  1.2f
+#define STAB_KI_PITCH  0.25f
 
-#define STAB_KI_YAW_RATE  0.05f
+#define STAB_KI_YAW_RATE  0.08f
 
-#define STAB_I_MAX    200.0f
+#define STAB_I_MAX    600.0f
 
 #define STAB_KFF_YAW      0.0f
 #define STAB_YAW_SIGN     -1.0f
-#define STAB_YAW_I_MAX    300.0f
+#define STAB_YAW_I_MAX    1200.0f
 
 #define YAW_CCW_IS_RF_LB  1
 
-#define IMU_SWAP_ROLL_PITCH  1
+#define IMU_SWAP_ROLL_PITCH  0
 
-#define STAB_ROLL_SIGN    1.0f
-#define STAB_PITCH_SIGN   1.0f
+#define STAB_ROLL_SIGN    -1.0f
+#define STAB_PITCH_SIGN   -1.0f
 
 #define CMD_TILT_SLEW_DEG_PER_S      80.0f
 #define CMD_YAW_SLEW_DPS_PER_S      900.0f
@@ -82,9 +82,9 @@ typedef enum {
 #define YAW_MIX_FRONT_CCW_REAR_CW  1
 
 #define MOTOR_GAIN_LF   1.000f
-#define MOTOR_GAIN_RF   1.000f
+#define MOTOR_GAIN_RF   1.010f
 #define MOTOR_GAIN_LB   1.000f
-#define MOTOR_GAIN_RB   1.000f
+#define MOTOR_GAIN_RB   1.010f
 
 #define MOTOR_OFFS_LF   0.0f
 #define MOTOR_OFFS_RF   0.0f
@@ -93,7 +93,7 @@ typedef enum {
 
 #define YAW_TRIM  0.0f
 
-#define ROLL_TRIM_DEG   0.0f
+#define ROLL_TRIM_DEG   0.8f
 #define PITCH_TRIM_DEG  0.0f
 
 #define LEVEL_CALIB_SAMPLES        200u
@@ -101,13 +101,13 @@ typedef enum {
 #define LEVEL_CALIB_ACC_OK_REQUIRED 1
 
 #define CG_PITCH_BIAS_PWM   -100
-#define CG_ROLL_BIAS_PWM    0
+#define CG_ROLL_BIAS_PWM    -30
 
-#define CG_BIAS_START_PWM   5600u
+#define CG_BIAS_START_PWM   4500u
 #define CG_BIAS_FULL_PWM    7600u
 
-#define I_ENABLE_BASE_PWM   6500u
-#define I_DISABLE_BASE_PWM  6000u
+#define I_ENABLE_BASE_PWM   4000u
+#define I_DISABLE_BASE_PWM  3800u
 
 // =========================
 // PROFILE SWITCH
@@ -121,8 +121,8 @@ typedef enum {
     #define NAV_MIX_GAIN         2.0f
 
     #define STAB_U_MAX           2800.0f
-    #define STAB_YAW_MAX          900.0f
-    #define STAB_KP_YAW_RATE        6.0f
+    #define STAB_YAW_MAX         1200.0f
+    #define STAB_KP_YAW_RATE        1.0f
 #else
     #define NAV_TILT_DEG         10.0f
     #define NAV_YAW_RATE_DPS    180.0f
@@ -130,8 +130,8 @@ typedef enum {
     #define NAV_MIX_GAIN         1.0f
 
     #define STAB_U_MAX           1400.0f
-    #define STAB_YAW_MAX          450.0f
-    #define STAB_KP_YAW_RATE       3.50f
+    #define STAB_YAW_MAX         600.0f
+    #define STAB_KP_YAW_RATE        4.0f
 #endif
 /* USER CODE END PD */
 
@@ -461,8 +461,6 @@ static void ReadPwm(PwmPayload_t *p)
 
 static void SetPwm(const PwmPayload_t *p)
 {
-    if (!g_armed) g_armed = 1;
-
     g_last_pwm_cmd = *p;
     g_have_pwm_cmd = 1;
 
@@ -931,7 +929,8 @@ int main(void)
 
             g_target_base_pwm = sp.base_pwm;
             g_ctrl_mode = CTRL_STAB;
-            g_armed = 1;
+            if (g_level_calib_done) g_armed = 1;
+            else g_armed = 0;
 
             g_target_cmd_roll_deg  = 0.0f;
             g_target_cmd_pitch_deg = 0.0f;
