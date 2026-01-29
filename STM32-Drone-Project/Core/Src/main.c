@@ -72,7 +72,7 @@ typedef enum {
 #define IMU_SWAP_ROLL_PITCH  0
 
 #define STAB_ROLL_SIGN    -1.0f
-#define STAB_PITCH_SIGN   -1.0f
+#define STAB_PITCH_SIGN   1.0f
 
 #define CMD_TILT_SLEW_DEG_PER_S      80.0f
 #define CMD_YAW_SLEW_DPS_PER_S      900.0f
@@ -82,9 +82,9 @@ typedef enum {
 #define YAW_MIX_FRONT_CCW_REAR_CW  1
 
 #define MOTOR_GAIN_LF   1.000f
-#define MOTOR_GAIN_RF   1.010f
+#define MOTOR_GAIN_RF   1.060f
 #define MOTOR_GAIN_LB   1.000f
-#define MOTOR_GAIN_RB   1.010f
+#define MOTOR_GAIN_RB   1.075f
 
 #define MOTOR_OFFS_LF   0.0f
 #define MOTOR_OFFS_RF   0.0f
@@ -93,15 +93,15 @@ typedef enum {
 
 #define YAW_TRIM  0.0f
 
-#define ROLL_TRIM_DEG   0.8f
+#define ROLL_TRIM_DEG   5.0f
 #define PITCH_TRIM_DEG  0.0f
 
 #define LEVEL_CALIB_SAMPLES        200u
 #define LEVEL_CALIB_GYRO_MAX_DPS   2.5f
 #define LEVEL_CALIB_ACC_OK_REQUIRED 1
 
-#define CG_PITCH_BIAS_PWM   -100
-#define CG_ROLL_BIAS_PWM    -30
+#define CG_PITCH_BIAS_PWM   0
+#define CG_ROLL_BIAS_PWM    80
 
 #define CG_BIAS_START_PWM   4500u
 #define CG_BIAS_FULL_PWM    7600u
