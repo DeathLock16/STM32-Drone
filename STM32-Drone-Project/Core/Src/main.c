@@ -49,90 +49,107 @@ typedef enum {
 
 #define PWM_MIN 0
 #define PWM_MAX 10000
-#define PWM_STAB_FLOOR 500
+#define PWM_STAB_FLOOR 0
 
+// =========================
+// STAB PID (startowe pod hover test)
+// =========================
 #define STAB_KP_ROLL   9.0f
-#define STAB_KD_ROLL   1.2f
-#define STAB_KI_ROLL   0.25f
+#define STAB_KD_ROLL   2.5f
+#define STAB_KI_ROLL   0.55f
 
 #define STAB_KP_PITCH  9.0f
-#define STAB_KD_PITCH  1.2f
-#define STAB_KI_PITCH  0.25f
+#define STAB_KD_PITCH  2.5f
+#define STAB_KI_PITCH  0.55f
 
-#define STAB_KI_YAW_RATE  0.08f
+#define STAB_U_MAX     2200.0f
+#define STAB_I_MAX     2200.0f
 
-#define STAB_I_MAX    600.0f
-
+// =========================
+// YAW HOLD (żeby STOP nie kręcił)
+// =========================
 #define STAB_KFF_YAW      0.0f
-#define STAB_YAW_SIGN     -1.0f
-#define STAB_YAW_I_MAX    1200.0f
+#define STAB_YAW_SIGN     1.0f
+#define STAB_YAW_MAX      350.0f
+#define STAB_YAW_I_MAX    600.0f
+#define STAB_KP_YAW_RATE  1.2f
+#define STAB_KI_YAW_RATE  0.20f
 
-#define YAW_CCW_IS_RF_LB  1
+// =========================
+// Twoje osie / znaki (zostaw)
+// =========================
+#define IMU_SWAP_ROLL_PITCH  1
+#define STAB_ROLL_SIGN       1.0f
+#define STAB_PITCH_SIGN     -1.0f
 
-#define IMU_SWAP_ROLL_PITCH  0
-
-#define STAB_ROLL_SIGN    -1.0f
-#define STAB_PITCH_SIGN   1.0f
-
-#define CMD_TILT_SLEW_DEG_PER_S      80.0f
-#define CMD_YAW_SLEW_DPS_PER_S      900.0f
-#define BASE_SLEW_PWM_PER_S       25000.0f
-#define NAV_BIAS_SLEW_PWM_PER_S    6000.0f
-
+#define YAW_CCW_IS_RF_LB     1
 #define YAW_MIX_FRONT_CCW_REAR_CW  1
 
+// =========================
+// Slew / reakcja na komendy
+// =========================
+#define CMD_TILT_SLEW_DEG_PER_S      80.0f
+#define CMD_YAW_SLEW_DPS_PER_S      900.0f
+#define BASE_SLEW_PWM_PER_S       12000.0f
+#define NAV_BIAS_SLEW_PWM_PER_S    6000.0f
+
+// =========================
+// Motor kompensacje (stroisz OFFS/GAIN)
+// =========================
 #define MOTOR_GAIN_LF   1.000f
-#define MOTOR_GAIN_RF   1.060f
 #define MOTOR_GAIN_LB   1.000f
-#define MOTOR_GAIN_RB   1.075f
+#define MOTOR_GAIN_RF   1.060f
+#define MOTOR_GAIN_RB   1.030f
 
 #define MOTOR_OFFS_LF   0.0f
-#define MOTOR_OFFS_RF   0.0f
 #define MOTOR_OFFS_LB   0.0f
-#define MOTOR_OFFS_RB   0.0f
+#define MOTOR_OFFS_RF   450.0f
+#define MOTOR_OFFS_RB   300.0f
 
-#define YAW_TRIM  0.0f
+// =========================
+// Trims (na start 0, stroisz dopiero po level-calib)
+// =========================
+#define YAW_TRIM        0.0f
+#define ROLL_TRIM_DEG   +1.90f
+#define PITCH_TRIM_DEG  +1.65f
 
-#define ROLL_TRIM_DEG   5.0f
-#define PITCH_TRIM_DEG  0.0f
-
-#define LEVEL_CALIB_SAMPLES        200u
-#define LEVEL_CALIB_GYRO_MAX_DPS   2.5f
+// =========================
+// Level calibracja
+// =========================
+#define LEVEL_CALIB_SAMPLES         200u
+#define LEVEL_CALIB_GYRO_MAX_DPS    2.5f
 #define LEVEL_CALIB_ACC_OK_REQUIRED 1
 
-#define CG_PITCH_BIAS_PWM   0
-#define CG_ROLL_BIAS_PWM    80
+// =========================
+// CG biasy (NA START = 0, potem stroisz wg ściągi)
+// =========================
+#define CG_PITCH_BIAS_PWM   300
+#define CG_ROLL_BIAS_PWM    0
 
-#define CG_BIAS_START_PWM   4500u
-#define CG_BIAS_FULL_PWM    7600u
-
-#define I_ENABLE_BASE_PWM   4000u
-#define I_DISABLE_BASE_PWM  3800u
+// kiedy biasy/offsety mają się “włączać” (dla trimk/cgk)
+#define CG_BIAS_START_PWM   1400u
+#define CG_BIAS_FULL_PWM    3200u
 
 // =========================
-// PROFILE SWITCH
+// Integrator enable (żeby łapał stały błąd po oderwaniu)
 // =========================
-#define CONTROL_PROFILE_GROUND_TEST  0
+#define I_ENABLE_BASE_PWM   900u
+#define I_DISABLE_BASE_PWM  700u
 
-#if CONTROL_PROFILE_GROUND_TEST
-    #define NAV_TILT_DEG         20.0f
-    #define NAV_YAW_RATE_DPS    360.0f
-    #define NAV_THRUST_BIAS      700
-    #define NAV_MIX_GAIN         2.0f
+// =========================
+// NAV (na testach hover i tak używaj STOP)
+// =========================
+#define NAV_TILT_DEG        10.0f
+#define NAV_YAW_RATE_DPS   180.0f
+#define NAV_THRUST_BIAS      0
+#define NAV_MIX_GAIN         1.0f
 
-    #define STAB_U_MAX           2800.0f
-    #define STAB_YAW_MAX         1200.0f
-    #define STAB_KP_YAW_RATE        1.0f
-#else
-    #define NAV_TILT_DEG         10.0f
-    #define NAV_YAW_RATE_DPS    180.0f
-    #define NAV_THRUST_BIAS        0
-    #define NAV_MIX_GAIN         1.0f
-
-    #define STAB_U_MAX           1400.0f
-    #define STAB_YAW_MAX         600.0f
-    #define STAB_KP_YAW_RATE        4.0f
-#endif
+// =========================
+// Anti-pivot takeoff blend
+// =========================
+#define TAKEOFF_BLEND_START_PWM  1800.0f
+#define TAKEOFF_BLEND_FULL_PWM   4800.0f
+#define TAKEOFF_BLEND_MIN        0.55f
 /* USER CODE END PD */
 
 /* Private variables ---------------------------------------------------------*/
@@ -702,12 +719,33 @@ static void ControlStep_Stabilize(void)
     u_roll  = clamp_f(u_roll,  -STAB_U_MAX, STAB_U_MAX);
     u_pitch = clamp_f(u_pitch, -STAB_U_MAX, STAB_U_MAX);
 
+    float blend;
+    float base_f = (float)g_stab_base_pwm;
+
+    if (base_f <= TAKEOFF_BLEND_START_PWM)
+    {
+        blend = TAKEOFF_BLEND_MIN;
+    }
+    else if (base_f >= TAKEOFF_BLEND_FULL_PWM)
+    {
+        blend = 1.0f;
+    }
+    else
+    {
+        float t = (base_f - TAKEOFF_BLEND_START_PWM) /
+                  (TAKEOFF_BLEND_FULL_PWM - TAKEOFF_BLEND_START_PWM);
+        blend = TAKEOFF_BLEND_MIN + (1.0f - TAKEOFF_BLEND_MIN) * t;
+    }
+
+    u_roll  *= blend;
+    u_pitch *= blend;
+
     int32_t base = (int32_t)g_stab_base_pwm;
 
-    float c_lf = (u_pitch + u_roll);
-    float c_rf = (u_pitch - u_roll);
-    float c_lb = (-u_pitch + u_roll);
-    float c_rb = (-u_pitch - u_roll);
+    float c_lf = (-u_pitch + u_roll);
+    float c_rf = (-u_pitch - u_roll);
+    float c_lb = (u_pitch + u_roll);
+    float c_rb = (u_pitch - u_roll);
 
     float nav = (float)g_nav_bias * NAV_MIX_GAIN;
     switch ((uint8_t)g_last_nav_action)
@@ -768,10 +806,17 @@ static void ControlStep_Stabilize(void)
         }
     }
 
-    float out_lf_f = ((float)base + k * c_lf) * MOTOR_GAIN_LF + MOTOR_OFFS_LF;
-    float out_rf_f = ((float)base + k * c_rf) * MOTOR_GAIN_RF + MOTOR_OFFS_RF;
-    float out_lb_f = ((float)base + k * c_lb) * MOTOR_GAIN_LB + MOTOR_OFFS_LB;
-    float out_rb_f = ((float)base + k * c_rb) * MOTOR_GAIN_RB + MOTOR_OFFS_RB;
+    float mix_lf = k * c_lf;
+    float mix_rf = k * c_rf;
+    float mix_lb = k * c_lb;
+    float mix_rb = k * c_rb;
+
+    float trimk = CgBiasScale(g_stab_base_pwm);
+
+    float out_lf_f = (float)base + mix_lf * MOTOR_GAIN_LF + MOTOR_OFFS_LF * trimk;
+    float out_rf_f = (float)base + mix_rf * MOTOR_GAIN_RF + MOTOR_OFFS_RF * trimk;
+    float out_lb_f = (float)base + mix_lb * MOTOR_GAIN_LB + MOTOR_OFFS_LB * trimk;
+    float out_rb_f = (float)base + mix_rb * MOTOR_GAIN_RB + MOTOR_OFFS_RB * trimk;
 
     int32_t lf = (int32_t)lroundf(out_lf_f);
     int32_t rf = (int32_t)lroundf(out_rf_f);
@@ -927,6 +972,9 @@ int main(void)
 
             if (sp.base_pwm > PWM_MAX) sp.base_pwm = PWM_MAX;
 
+            ControlMode_t prev_mode = g_ctrl_mode;
+            uint8_t prev_armed = g_armed;
+
             g_target_base_pwm = sp.base_pwm;
             g_ctrl_mode = CTRL_STAB;
             if (g_level_calib_done) g_armed = 1;
@@ -939,10 +987,12 @@ int main(void)
             g_last_nav_action = NAV_STOP;
             g_nav_bias = 0;
 
-            i_roll = 0.0f;
-            i_pitch = 0.0f;
-            i_yaw = 0.0f;
-            g_i_enabled = 0;
+            if (prev_mode != CTRL_STAB || !prev_armed) {
+                i_roll = 0.0f;
+                i_pitch = 0.0f;
+                i_yaw = 0.0f;
+                g_i_enabled = 0;
+            }
 
             tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_STAB_ACK,
                                          (const uint8_t*)&sp, STAB_PAYLOAD_SIZE,
@@ -976,17 +1026,28 @@ int main(void)
 
             if (np.base_pwm > PWM_MAX) np.base_pwm = PWM_MAX;
 
+            ControlMode_t prev_mode = g_ctrl_mode;
+            uint8_t prev_armed = g_armed;
+
             g_target_base_pwm = np.base_pwm;
             g_ctrl_mode = CTRL_STAB;
-            g_armed = 1;
+
+            if (g_level_calib_done)
+            	g_armed = 1;
+            else {
+            	g_armed = 0;
+            	PWM_SetSafe();
+            }
 
             g_last_nav_action = np.action;
             g_nav_bias = 0;
 
-            i_roll = 0.0f;
-            i_pitch = 0.0f;
-            i_yaw = 0.0f;
-            g_i_enabled = 0;
+            if (prev_mode != CTRL_STAB || !prev_armed) {
+                i_roll = 0.0f;
+                i_pitch = 0.0f;
+                i_yaw = 0.0f;
+                g_i_enabled = 0;
+            }
 
             g_target_cmd_roll_deg  = 0.0f;
             g_target_cmd_pitch_deg = 0.0f;
