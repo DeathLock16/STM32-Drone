@@ -76,7 +76,7 @@ typedef enum {
 #define STAB_KI_YAW_RATE  0.20f
 
 // =========================
-// Twoje osie / znaki (zostaw)
+// Osie / znaki
 // =========================
 #define IMU_SWAP_ROLL_PITCH  1
 #define STAB_ROLL_SIGN       1.0f
@@ -94,7 +94,7 @@ typedef enum {
 #define NAV_BIAS_SLEW_PWM_PER_S    6000.0f
 
 // =========================
-// Motor kompensacje (stroisz OFFS/GAIN)
+// Motor kompensacje (GAIN w %, OFFS na sztywno)
 // =========================
 #define MOTOR_GAIN_LF   1.000f
 #define MOTOR_GAIN_LB   1.000f
@@ -107,7 +107,7 @@ typedef enum {
 #define MOTOR_OFFS_RB   300.0f
 
 // =========================
-// Trims (na start 0, stroisz dopiero po level-calib)
+// Trims (uwzględnienie błędu kąta)
 // =========================
 #define YAW_TRIM        0.0f
 #define ROLL_TRIM_DEG   +1.90f
@@ -121,7 +121,7 @@ typedef enum {
 #define LEVEL_CALIB_ACC_OK_REQUIRED 1
 
 // =========================
-// CG biasy (NA START = 0, potem stroisz wg ściągi)
+// CG biasy (strojenie według wagi w PWM)
 // =========================
 #define CG_PITCH_BIAS_PWM   300
 #define CG_ROLL_BIAS_PWM    0
