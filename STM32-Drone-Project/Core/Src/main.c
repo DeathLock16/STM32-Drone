@@ -98,20 +98,20 @@ typedef enum {
 // =========================
 #define MOTOR_GAIN_LF   1.000f
 #define MOTOR_GAIN_LB   1.000f
-#define MOTOR_GAIN_RF   1.060f
-#define MOTOR_GAIN_RB   1.030f
+#define MOTOR_GAIN_RF   1.000f
+#define MOTOR_GAIN_RB   1.000f
 
 #define MOTOR_OFFS_LF   0.0f
 #define MOTOR_OFFS_LB   0.0f
-#define MOTOR_OFFS_RF   450.0f
-#define MOTOR_OFFS_RB   300.0f
+#define MOTOR_OFFS_RF   0.0f
+#define MOTOR_OFFS_RB   0.0f
 
 // =========================
 // Trims (uwzględnienie błędu kąta)
 // =========================
 #define YAW_TRIM        0.0f
-#define ROLL_TRIM_DEG   +1.90f
-#define PITCH_TRIM_DEG  +1.65f
+#define ROLL_TRIM_DEG   +1.10f
+#define PITCH_TRIM_DEG  +1.90f
 
 // =========================
 // Level calibracja
@@ -123,8 +123,8 @@ typedef enum {
 // =========================
 // CG biasy (strojenie według wagi w PWM)
 // =========================
-#define CG_PITCH_BIAS_PWM   300
-#define CG_ROLL_BIAS_PWM    0
+#define CG_PITCH_BIAS_PWM   +100			// < 0 przód ; > 0 tył
+#define CG_ROLL_BIAS_PWM    -600 		// < 0 lewo ; > 0 prawo
 
 // kiedy biasy/offsety mają się “włączać” (dla trimk/cgk)
 #define CG_BIAS_START_PWM   1400u
