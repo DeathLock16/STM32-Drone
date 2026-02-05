@@ -81,7 +81,10 @@ typedef enum
     CMD_IMU_DATA  = 0xA0,
 
 	CMD_TELEM_READ = 0X21,
-	CMD_TELEM_DATA = 0XA1
+	CMD_TELEM_DATA = 0XA1,
+
+    CMD_TELEM_LVL_READ = 0x22,
+    CMD_TELEM_LVL_DATA = 0xA2
 } ProtoCmd_t;
 
 typedef struct __attribute__((packed))
@@ -138,6 +141,23 @@ typedef struct __attribute__((packed))
 } TelemetryPayload_t;
 
 #define TELEM_PAYLOAD_SIZE ((uint8_t)sizeof(TelemetryPayload_t)) // 14
+
+typedef struct __attribute__((packed))
+{
+    int16_t roll_raw;
+    int16_t pitch_raw;
+    int16_t yaw_raw;
+
+    int16_t roll_lvl;
+    int16_t pitch_lvl;
+
+    int16_t roll_ctrl;
+    int16_t pitch_ctrl;
+
+    PwmPayload_t pwm;
+} TelemetryLvlPayload_t;
+
+#define TELEM_LVL_PAYLOAD_SIZE ((uint8_t)sizeof(TelemetryLvlPayload_t))
 
 
 /* ====== API ====== */

@@ -38,63 +38,69 @@ typedef enum {
 
 #define IMU_UPDATE_PERIOD_MS 10u
 
+// IMU quality gates / LPF
 #define ACC_LPF_CUTOFF_HZ  20.0f
-#define ACC_G_MIN          0.40f
-#define ACC_G_MAX          2.00f
+#define ACC_G_MIN          0.20f
+#define ACC_G_MAX          3.50f
 
-#define TILT_KILL_DEG      35.0f
-#define TILT_UNKILL_DEG    25.0f
-#define TILT_KILL_DEBOUNCE_MS   50u
-#define TILT_UNKILL_HOLD_MS    300u
+// Safety tilt kill
+#define TILT_KILL_DEG            35.0f
+#define TILT_UNKILL_DEG          25.0f
+#define TILT_KILL_DEBOUNCE_MS    50u
+#define TILT_UNKILL_HOLD_MS      300u
 
+// PWM range
 #define PWM_MIN 0
 #define PWM_MAX 10000
 #define PWM_STAB_FLOOR 0
 
 // =========================
-// STAB PID (startowe pod hover test)
+// STAB PID (START: delikatnie, pod pierwszy hover)
 // =========================
-#define STAB_KP_ROLL   9.0f
-#define STAB_KD_ROLL   2.5f
-#define STAB_KI_ROLL   0.55f
+#define STAB_KP_ROLL    22.0f
+#define STAB_KD_ROLL    6.5f
+#define STAB_KI_ROLL    0.25f
 
-#define STAB_KP_PITCH  9.0f
-#define STAB_KD_PITCH  2.5f
-#define STAB_KI_PITCH  0.55f
+#define STAB_KP_PITCH   22.0f
+#define STAB_KD_PITCH   6.5f
+#define STAB_KI_PITCH   0.25f
 
-#define STAB_U_MAX     2200.0f
-#define STAB_I_MAX     2200.0f
-
-// =========================
-// YAW HOLD (żeby STOP nie kręcił)
-// =========================
-#define STAB_KFF_YAW      0.0f
-#define STAB_YAW_SIGN     1.0f
-#define STAB_YAW_MAX      350.0f
-#define STAB_YAW_I_MAX    600.0f
-#define STAB_KP_YAW_RATE  1.2f
-#define STAB_KI_YAW_RATE  0.20f
+// Limity regulatora (ile może dodać/odjąć od base)
+#define STAB_U_MAX      2200.0f
+#define STAB_I_MAX      1200.0f
 
 // =========================
-// Osie / znaki
+// YAW HOLD (żeby STOP nie dryfował)
+// =========================
+#define STAB_KFF_YAW       0.0f
+#define STAB_YAW_SIGN      1.0f
+#define STAB_YAW_MAX       450.0f
+#define STAB_YAW_I_MAX     350.0f
+#define STAB_KP_YAW_RATE   1.0f
+#define STAB_KI_YAW_RATE   0.08f
+
+// =========================
+// Osie / znaki (NIE ruszamy Twoich SIGNów)
 // =========================
 #define IMU_SWAP_ROLL_PITCH  1
+
 #define STAB_ROLL_SIGN       1.0f
 #define STAB_PITCH_SIGN     -1.0f
 
+// Yaw mix (Twoja konfiguracja)
 #define YAW_CCW_IS_RF_LB     1
 #define YAW_MIX_FRONT_CCW_REAR_CW  1
 
 // =========================
 // Slew / reakcja na komendy
 // =========================
-#define CMD_TILT_SLEW_DEG_PER_S      80.0f
-#define CMD_YAW_SLEW_DPS_PER_S      900.0f
-#define BASE_SLEW_PWM_PER_S       12000.0f
+#define CMD_TILT_SLEW_DEG_PER_S     80.0f
+#define CMD_YAW_SLEW_DPS_PER_S     900.0f
+#define BASE_SLEW_PWM_PER_S      12000.0f
 #define NAV_BIAS_SLEW_PWM_PER_S    6000.0f
 
 // =========================
-// Motor kompensacje (GAIN w %, OFFS na sztywno)
+// Motor kompensacje (START: wszystko równe)
 // =========================
 #define MOTOR_GAIN_LF   1.000f
 #define MOTOR_GAIN_LB   1.000f
@@ -107,11 +113,11 @@ typedef enum {
 #define MOTOR_OFFS_RB   0.0f
 
 // =========================
-// Trims (uwzględnienie błędu kąta)
+// Trims (START: zero)
 // =========================
 #define YAW_TRIM        0.0f
-#define ROLL_TRIM_DEG   +1.10f
-#define PITCH_TRIM_DEG  +1.90f
+#define ROLL_TRIM_DEG   0.0f
+#define PITCH_TRIM_DEG  0.0f
 
 // =========================
 // Level calibracja
@@ -121,36 +127,40 @@ typedef enum {
 #define LEVEL_CALIB_ACC_OK_REQUIRED 1
 
 // =========================
-// CG biasy (strojenie według wagi w PWM)
+// CG biasy (START: brak)
 // =========================
-#define CG_PITCH_BIAS_PWM   +100			// < 0 przód ; > 0 tył
-#define CG_ROLL_BIAS_PWM    -600 		// < 0 lewo ; > 0 prawo
+#define CG_ROLL_BIAS_GROUND_PWM   -600
+#define CG_ROLL_BIAS_AIR_PWM      -180
 
-// kiedy biasy/offsety mają się “włączać” (dla trimk/cgk)
+#define CG_PITCH_BIAS_GROUND_PWM  -200
+#define CG_PITCH_BIAS_AIR_PWM     -60
+
+// kiedy biasy/offsety mają się “włączać” (dla cgk/trimk)
 #define CG_BIAS_START_PWM   1400u
 #define CG_BIAS_FULL_PWM    3200u
 
 // =========================
-// Integrator enable (żeby łapał stały błąd po oderwaniu)
+// Integrator enable (START: dopiero po oderwaniu)
 // =========================
-#define I_ENABLE_BASE_PWM   900u
-#define I_DISABLE_BASE_PWM  700u
+#define I_ENABLE_BASE_PWM   2600u
+#define I_DISABLE_BASE_PWM  2200u
 
 // =========================
-// NAV (na testach hover i tak używaj STOP)
+// NAV (na strojenie hover trzymaj STOP)
 // =========================
 #define NAV_TILT_DEG        10.0f
-#define NAV_YAW_RATE_DPS   180.0f
-#define NAV_THRUST_BIAS      0
-#define NAV_MIX_GAIN         1.0f
+#define NAV_YAW_RATE_DPS    180.0f
+#define NAV_THRUST_BIAS     0
+#define NAV_MIX_GAIN        1.0f
 
 // =========================
-// Anti-pivot takeoff blend
+// Anti-pivot takeoff blend (START: łagodnie, ale nie "muł")
 // =========================
-#define TAKEOFF_BLEND_START_PWM  1800.0f
-#define TAKEOFF_BLEND_FULL_PWM   4800.0f
-#define TAKEOFF_BLEND_MIN        0.55f
+#define TAKEOFF_BLEND_START_PWM  2200.0f
+#define TAKEOFF_BLEND_FULL_PWM   4200.0f
+#define TAKEOFF_BLEND_MIN        1.00f
 /* USER CODE END PD */
+
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
@@ -323,6 +333,21 @@ static float CgBiasScale(uint16_t base_pwm)
     return ((float)base_pwm - (float)CG_BIAS_START_PWM) /
            ((float)CG_BIAS_FULL_PWM  - (float)CG_BIAS_START_PWM);
 }
+
+static inline float lerp_f(float a, float b, float t)
+{
+    return a + (b - a) * t;
+}
+
+static float AirBlend(uint16_t base_pwm)
+{
+    if (base_pwm <= TAKEOFF_BLEND_START_PWM) return 0.0f;
+    if (base_pwm >= TAKEOFF_BLEND_FULL_PWM)  return 1.0f;
+
+    return ((float)base_pwm - (float)TAKEOFF_BLEND_START_PWM) /
+           ((float)TAKEOFF_BLEND_FULL_PWM  - (float)TAKEOFF_BLEND_START_PWM);
+}
+
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -737,15 +762,21 @@ static void ControlStep_Stabilize(void)
         blend = TAKEOFF_BLEND_MIN + (1.0f - TAKEOFF_BLEND_MIN) * t;
     }
 
-    u_roll  *= blend;
+    u_roll *= blend;
     u_pitch *= blend;
+
+    u_yaw_total *= blend;
+    u_yaw_total = clamp_f(u_yaw_total, -STAB_YAW_MAX, STAB_YAW_MAX);
+
+    float airk = AirBlend(g_stab_base_pwm);
+    u_yaw_total *= airk;
 
     int32_t base = (int32_t)g_stab_base_pwm;
 
     float c_lf = (-u_pitch + u_roll);
     float c_rf = (-u_pitch - u_roll);
-    float c_lb = (u_pitch + u_roll);
-    float c_rb = (u_pitch - u_roll);
+    float c_lb = ( u_pitch + u_roll);
+    float c_rb = ( u_pitch - u_roll);
 
     float nav = (float)g_nav_bias * NAV_MIX_GAIN;
     switch ((uint8_t)g_last_nav_action)
@@ -757,9 +788,18 @@ static void ControlStep_Stabilize(void)
         default: break;
     }
 
-    float cgk = CgBiasScale(g_stab_base_pwm);
-    float pitch_bias = (float)CG_PITCH_BIAS_PWM * cgk;
-    float roll_bias  = (float)CG_ROLL_BIAS_PWM  * cgk;
+    float cgk  = CgBiasScale(g_stab_base_pwm);
+
+    float roll_bias_pwm  = lerp_f((float)CG_ROLL_BIAS_GROUND_PWM,
+                                  (float)CG_ROLL_BIAS_AIR_PWM,
+                                  airk);
+
+    float pitch_bias_pwm = lerp_f((float)CG_PITCH_BIAS_GROUND_PWM,
+                                  (float)CG_PITCH_BIAS_AIR_PWM,
+                                  airk);
+
+    float roll_bias  = roll_bias_pwm  * cgk;
+    float pitch_bias = pitch_bias_pwm * cgk;
 
     c_lf += pitch_bias;
     c_rf += pitch_bias;
@@ -817,6 +857,26 @@ static void ControlStep_Stabilize(void)
     float out_rf_f = (float)base + mix_rf * MOTOR_GAIN_RF + MOTOR_OFFS_RF * trimk;
     float out_lb_f = (float)base + mix_lb * MOTOR_GAIN_LB + MOTOR_OFFS_LB * trimk;
     float out_rb_f = (float)base + mix_rb * MOTOR_GAIN_RB + MOTOR_OFFS_RB * trimk;
+
+    float max_out = fmaxf(fmaxf(out_lf_f, out_rf_f), fmaxf(out_lb_f, out_rb_f));
+    if (max_out > (float)PWM_MAX)
+    {
+        float d = max_out - (float)PWM_MAX;
+        out_lf_f -= d;
+        out_rf_f -= d;
+        out_lb_f -= d;
+        out_rb_f -= d;
+    }
+
+    float min_out = fminf(fminf(out_lf_f, out_rf_f), fminf(out_lb_f, out_rb_f));
+    if (min_out < (float)PWM_STAB_FLOOR)
+    {
+        float d = (float)PWM_STAB_FLOOR - min_out;
+        out_lf_f += d;
+        out_rf_f += d;
+        out_lb_f += d;
+        out_rb_f += d;
+    }
 
     int32_t lf = (int32_t)lroundf(out_lf_f);
     int32_t rf = (int32_t)lroundf(out_rf_f);
@@ -958,6 +1018,54 @@ int main(void)
                                          (const uint8_t*)&tp, TELEM_PAYLOAD_SIZE,
                                          tx, sizeof(tx));
           }
+        }
+        else if (rx->cmd == CMD_TELEM_LVL_READ)
+        {
+            if (!g_imu_ready)
+            {
+                tx_len = Protocol_BuildStatusFrame(ST_ERR_IMU_NOT_READY, tx, sizeof(tx));
+            }
+            else
+            {
+                TelemetryLvlPayload_t tp;
+                memset(&tp, 0, sizeof(tp));
+
+                float roll_raw  = g_roll_deg;
+                float pitch_raw = g_pitch_deg;
+                float yaw_raw   = (float)g_imu_last.yaw / 100.0f;
+
+                float roll_lvl  = roll_raw  - g_level_roll_off;
+                float pitch_lvl = pitch_raw - g_level_pitch_off;
+
+                float roll_meas_raw, pitch_meas_raw;
+
+        #if IMU_SWAP_ROLL_PITCH
+                roll_meas_raw  = pitch_raw - g_level_pitch_off;
+                pitch_meas_raw = roll_raw  - g_level_roll_off;
+        #else
+                roll_meas_raw  = roll_raw  - g_level_roll_off;
+                pitch_meas_raw = pitch_raw - g_level_pitch_off;
+        #endif
+
+                float roll_ctrl  = roll_meas_raw  * STAB_ROLL_SIGN;
+                float pitch_ctrl = pitch_meas_raw * STAB_PITCH_SIGN;
+
+                tp.roll_raw   = (int16_t)lroundf(roll_raw  * 100.0f);
+                tp.pitch_raw  = (int16_t)lroundf(pitch_raw * 100.0f);
+                tp.yaw_raw    = (int16_t)lroundf(yaw_raw   * 100.0f);
+
+                tp.roll_lvl   = (int16_t)lroundf(roll_lvl  * 100.0f);
+                tp.pitch_lvl  = (int16_t)lroundf(pitch_lvl * 100.0f);
+
+                tp.roll_ctrl  = (int16_t)lroundf(roll_ctrl  * 100.0f);
+                tp.pitch_ctrl = (int16_t)lroundf(pitch_ctrl * 100.0f);
+
+                ReadPwm(&tp.pwm);
+
+                tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_TELEM_LVL_DATA,
+                                             (const uint8_t*)&tp, TELEM_LVL_PAYLOAD_SIZE,
+                                             tx, sizeof(tx));
+            }
         }
         else if (rx->cmd == CMD_STAB_SET)
         {

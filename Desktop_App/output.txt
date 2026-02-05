@@ -1,0 +1,18 @@
+Plik: C:\Users\DeathLock\Desktop\drone_log_2026-02-03_14-59-19.csv
+Próbki w hover-segmencie: 118
+
+Sugerowane definicje do USER CODE PD:
+#define CG_ROLL_BIAS_PWM    39
+#define CG_PITCH_BIAS_PWM   -5
+
+// (INFO) targets from log-fit:
+// diff_lr_target (LF+LB - RF-RB) ≈ 155.3
+// diff_fb_target (LB+RB - LF-RF) ≈ 19.3
+// roll fit:  roll_cal_deg  ≈ 2.178 + (-0.014023) * diff_lr   (R²=0.83, n=112/118)
+// pitch fit: pitch_cal_deg ≈ -0.569 + (0.029510) * diff_fb   (R²=0.70, n=105/118)
+
+Ważne:
+- To jest *trim CG* (stały bias), żeby stabilizacja nie musiała cały czas 'walczyć' integratorem.
+- Jeśli log nie ma manewrów (NAV_LEFT/RIGHT/FWD/BACK), to nie da się wiarygodnie policzyć KP/KD/KI z samego 'stania' —
+  wtedy ten skrypt daje najpewniejszą rzecz, czyli biasy CG.
+- Testuj w bezpiecznych warunkach (na uwięzi / z osłonami śmigieł) i zmieniaj wartości małymi krokami.

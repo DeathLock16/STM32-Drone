@@ -37,6 +37,9 @@ CMD_IMU_DATA = 0xA0
 CMD_TELEM_READ = 0x21
 CMD_TELEM_DATA = 0xA1
 
+CMD_TELEM_LVL_READ = 0x22
+CMD_TELEM_LVL_DATA = 0xA2
+
 CMD_STATUS   = 0xE0
 
 CMD_NAV_SET  = 0x14
@@ -159,14 +162,24 @@ class App:
         }
         self.last_pwm = {"LF": 0, "RF": 0, "LB": 0, "RB": 0}
 
-        self.roll_var = tk.StringVar(value="ROLL: --.-°")
-        self.pitch_var = tk.StringVar(value="PITCH: --.-°")
-        self.yaw_var = tk.StringVar(value="YAW: --.-°")
+        self.ang_roll_raw  = tk.StringVar(value="--.-")
+        self.ang_pitch_raw = tk.StringVar(value="--.-")
+        self.ang_yaw_raw   = tk.StringVar(value="--.-")
+
+        self.ang_roll_cal  = tk.StringVar(value="--.-")
+        self.ang_pitch_cal = tk.StringVar(value="--.-")
+        self.ang_yaw_cal   = tk.StringVar(value="--.-")
 
         # ---- DATA LOGGING ----
         self.data_lock = threading.Lock()
         self.data_rows = []
         self.last_imu = {"roll": None, "pitch": None, "yaw": None}
+        self.last_cal = {"roll_cal": None, "pitch_cal": None}
+
+        self.tilt_kill_deg = 35.0
+        self.tilt_killed = False
+        self.tilt_kill_latch = True   # True = zostaje zablokowane do ręcznego resetu
+
 
         self._build_ui()
         self._ui_poll()
@@ -219,6 +232,9 @@ class App:
         self.btn_export = ttk.Button(slider_box, text="Export CSV", command=self.export_csv, state="disabled")
         self.btn_export.pack(fill="x", pady=(12,0))
 
+        self.btn_reset_panic = ttk.Button(slider_box, text="RESET PANIC", command=self.reset_panic, state="disabled")
+        self.btn_reset_panic.pack(fill="x", pady=(6,0))
+
         top_right = ttk.Frame(right)
         top_right.pack(fill="both", expand=True)
 
@@ -245,12 +261,28 @@ class App:
 
         self.btn_back.grid(row=2, column=1, padx=4, pady=4)
 
-        imu_box = ttk.Frame(controls)
-        imu_box.grid(row=3, column=0, columnspan=3, sticky="w", padx=4, pady=(8, 0))
+        imu_box = ttk.LabelFrame(controls, text="IMU angles (deg)", padding=6)
+        imu_box.grid(row=3, column=0, columnspan=3, sticky="we", padx=4, pady=(10, 0))
 
-        ttk.Label(imu_box, textvariable=self.roll_var).pack(anchor="w")
-        ttk.Label(imu_box, textvariable=self.pitch_var).pack(anchor="w")
-        ttk.Label(imu_box, textvariable=self.yaw_var).pack(anchor="w")
+        # nagłówki
+        ttk.Label(imu_box, text="", width=8).grid(row=0, column=0, sticky="w")
+        ttk.Label(imu_box, text="RAW", width=10).grid(row=0, column=1, sticky="w")
+        ttk.Label(imu_box, text="CAL", width=10).grid(row=0, column=2, sticky="w")
+
+        # ROLL
+        ttk.Label(imu_box, text="ROLL").grid(row=1, column=0, sticky="w")
+        ttk.Label(imu_box, textvariable=self.ang_roll_raw).grid(row=1, column=1, sticky="w")
+        ttk.Label(imu_box, textvariable=self.ang_roll_cal).grid(row=1, column=2, sticky="w")
+
+        # PITCH
+        ttk.Label(imu_box, text="PITCH").grid(row=2, column=0, sticky="w")
+        ttk.Label(imu_box, textvariable=self.ang_pitch_raw).grid(row=2, column=1, sticky="w")
+        ttk.Label(imu_box, textvariable=self.ang_pitch_cal).grid(row=2, column=2, sticky="w")
+
+        # YAW
+        ttk.Label(imu_box, text="YAW").grid(row=3, column=0, sticky="w")
+        ttk.Label(imu_box, textvariable=self.ang_yaw_raw).grid(row=3, column=1, sticky="w")
+        ttk.Label(imu_box, textvariable=self.ang_yaw_cal).grid(row=3, column=2, sticky="w")
 
         plot_box = ttk.LabelFrame(top_right, text="PWM (live)", padding=6)
         plot_box.pack(side="left", fill="both", expand=True, padx=(10,0))
@@ -277,6 +309,10 @@ class App:
         self.log.pack(fill="both", expand=True)
 
     def _on_slider(self, _=None):
+        if self.tilt_killed:
+            self.log_put("PANIC_KILLED: sterowanie zablokowane (zresetuj aplikację / dodaj reset).")
+            return
+        
         val = int(float(self.slider.get()) / 100) * 100
         self.pwm_var.set(val)
         self.lbl_pwm.config(text=str(val))
@@ -340,8 +376,16 @@ class App:
         for b in [self.btn_ping, self.btn_set_manual, self.btn_takeoff,
                   self.btn_yawl, self.btn_fwd, self.btn_yawr,
                   self.btn_left, self.btn_stop, self.btn_right, self.btn_back,
-                  self.btn_export]:
+                  self.btn_export, self.btn_reset_panic]:
             b.config(state=state)
+
+    def reset_panic(self):
+        self.tilt_killed = False
+        self.takeoff_on = False
+        self.takeoff_stop.set()
+        self.current_base_sent = 0
+        self.log_put("PANIC reset: sterowanie odblokowane (pamiętaj o bezpieczeństwie).")
+        self.lbl_state.config(text="State: CONNECTED")
 
     def start_server(self):
         if self.running:
@@ -435,16 +479,44 @@ class App:
     def pwm_poll_loop(self):
         while not self.pwm_poll_stop.is_set():
             if self.conn and self.pwm_poll_on:
-                self.send_frame(CMD_TELEM_READ)
+                self.send_frame(CMD_TELEM_LVL_READ)
             time.sleep(self.pwm_poll_interval_s)
 
     def send_ping(self):
         self.send_frame(CMD_PING)
         self.log_put("TX: PING")
 
+    def panic_kill(self, reason="TILT_KILL"):
+        if self.tilt_killed:
+            return
+        self.tilt_killed = True
+
+        # zatrzymaj takeoff ramp natychmiast
+        self.takeoff_on = False
+        self.takeoff_stop.set()
+        self.current_base_sent = 0
+
+        # wyślij STAB_OFF (STM robi PWM_SetSafe)
+        self.send_frame(CMD_STAB_OFF)
+
+        # hard stop: wymuś 0 na wszystkich kanałach
+        payload = struct.pack("<HHHH", 0, 0, 0, 0)
+        self.send_frame(CMD_PWM_SET, payload)
+
+        self.log_put(f"!!! PANIC STOP: {reason} -> STAB_OFF + PWM=0")
+
+        # opcjonalnie: zablokuj UI ruchu
+        self.root.after(0, lambda: self.lbl_state.config(text="State: PANIC_KILLED"))
+
     def send_manual_pwm(self):
+
+        if self.tilt_killed:
+            self.log_put("PANIC_KILLED: sterowanie zablokowane (zresetuj aplikację / dodaj reset).")
+            return
+        
         if self.takeoff_on:
             return
+        
         val = int(self.pwm_var.get())
         payload = struct.pack("<HHHH", val, val, val, val)
         self.send_frame(CMD_PWM_SET, payload)
@@ -452,6 +524,10 @@ class App:
 
     def send_nav(self, action):
         if not self.conn:
+            return
+        
+        if self.tilt_killed:
+            self.log_put("PANIC_KILLED: sterowanie zablokowane (zresetuj aplikację / dodaj reset).")
             return
 
         self.desired_action = int(action)
@@ -464,6 +540,10 @@ class App:
 
     def toggle_takeoff(self):
         if not self.conn:
+            return
+        
+        if self.tilt_killed:
+            self.log_put("PANIC_KILLED: sterowanie zablokowane (zresetuj aplikację / dodaj reset).")
             return
 
         if not self.takeoff_on:
@@ -506,7 +586,7 @@ class App:
 
             self.btn_takeoff.config(text="TAKEOFF (smooth)")
 
-    def _append_telem_row(self, t_s, roll, pitch, yaw, lf, rf, lb, rb):
+    def _append_telem_row(self, t_s, roll, pitch, yaw, roll_cal, pitch_cal, lf, rf, lb, rb):
         with self.data_lock:
             self.data_rows.append({
                 "t_s": t_s,
@@ -518,6 +598,9 @@ class App:
                 "roll_deg": float(roll),
                 "pitch_deg": float(pitch),
                 "yaw_deg": float(yaw),
+
+                "roll_cal_deg": (None if roll_cal is None else float(roll_cal)),
+                "pitch_cal_deg": (None if pitch_cal is None else float(pitch_cal)),
 
                 "pwm_lf": int(lf),
                 "pwm_rf": int(rf),
@@ -551,6 +634,8 @@ class App:
             "roll_deg",
             "pitch_deg",
             "yaw_deg",
+            "roll_cal_deg",
+            "pitch_cal_deg",
             "pwm_lf",
             "pwm_rf",
             "pwm_lb",
@@ -637,9 +722,12 @@ class App:
                         self.last_imu = {"roll": r, "pitch": p, "yaw": y}
 
                         self.root.after(0, lambda rr=r, pp=p, yy=y: (
-                            self.roll_var.set(f"ROLL: {rr:+.1f}°"),
-                            self.pitch_var.set(f"PITCH: {pp:+.1f}°"),
-                            self.yaw_var.set(f"YAW: {yy:+.1f}°")
+                            self.ang_roll_raw.set(f"{rr:+.1f}"),
+                            self.ang_pitch_raw.set(f"{pp:+.1f}"),
+                            self.ang_yaw_raw.set(f"{yy:+.1f}"),
+                            self.ang_roll_cal.set("--.-"),
+                            self.ang_pitch_cal.set("--.-"),
+                            self.ang_yaw_cal.set("--.-"),
                         ))
 
                         self.last_pwm = {"LF": lf, "RF": rf, "LB": lb, "RB": rb}
@@ -651,9 +739,57 @@ class App:
                         self.pwm_hist["LB"].append(lb)
                         self.pwm_hist["RB"].append(rb)
 
-                        self._append_telem_row(t, r, p, y, lf, rf, lb, rb)
+                        self._append_telem_row(t, r, p, y, None, None, lf, rf, lb, rb)
+
+                        if abs(r) >= self.tilt_kill_deg or abs(p) >= self.tilt_kill_deg:
+                            self.panic_kill(f"TILT {r:+.1f}/{p:+.1f} deg")
+                            continue
+
+                elif cmd == CMD_TELEM_LVL_DATA:
+                    # payload: imu_raw(6) + roll_cal(2) + pitch_cal(2) + pwm(8) = 18B
+                    if len(payload) == 22:
+                        roll, pitch, yaw, roll_lvl, pitch_lvl, roll_ctrl, pitch_ctrl, lb, lf, rf, rb = \
+                            struct.unpack("<hhhhhhhHHHH", payload)
+
+                        r = roll / 100.0
+                        p = pitch / 100.0
+                        y = yaw / 100.0
+
+                        rc = roll_ctrl / 100.0
+                        pc = pitch_ctrl / 100.0
+
+                        self.last_imu = {"roll": r, "pitch": p, "yaw": y}
+                        self.last_cal = {"roll_cal": rc, "pitch_cal": pc}
+
+                        self.root.after(0, lambda rr=r, pp=p, yy=y, rrc=rc, ppc=pc: (
+                            self.ang_roll_raw.set(f"{rr:+.1f}"),
+                            self.ang_pitch_raw.set(f"{pp:+.1f}"),
+                            self.ang_yaw_raw.set(f"{yy:+.1f}"),
+                            self.ang_roll_cal.set(f"{rrc:+.1f}"),
+                            self.ang_pitch_cal.set(f"{ppc:+.1f}"),
+                            self.ang_yaw_cal.set(f"{yy:+.1f}"),
+                        ))
+
+                        self.last_pwm = {"LF": lf, "RF": rf, "LB": lb, "RB": rb}
+
+                        t = time.monotonic() - self.t0
+                        self.t_hist.append(t)
+                        self.pwm_hist["LF"].append(lf)
+                        self.pwm_hist["RF"].append(rf)
+                        self.pwm_hist["LB"].append(lb)
+                        self.pwm_hist["RB"].append(rb)
+
+                        self._append_telem_row(t, r, p, y, rc, pc, lf, rf, lb, rb)
+
+                        if abs(r) >= self.tilt_kill_deg or abs(p) >= self.tilt_kill_deg:
+                            self.panic_kill(f"TILT {r:+.1f}/{p:+.1f} deg")
+                            continue
+
                     else:
-                        self.log_put(f"RX: TELEM bad len={len(payload)}")
+                        self.log_put(f"RX: TELEM_LVL bad len={len(payload)}")
+
+                else:
+                    self.log_put(f"RX: unknown cmd=0x{cmd:02X} len={len(payload)}")
 
             time.sleep(0.005)
 
