@@ -30,7 +30,7 @@ typedef struct
 #define STAB_PAYLOAD_SIZE ((uint8_t)sizeof(StabPayload_t))
 
 /* ustaw max payload na zapas (żeby kolejne komendy nie wymagały grzebania) */
-#define PROTO_MAX_PAYLOAD 32
+#define PROTO_MAX_PAYLOAD 64
 #define PROTO_MAX_FRAME   (6 + PROTO_MAX_PAYLOAD)
 
 /* ====== KIERUNEK ====== */
@@ -155,9 +155,21 @@ typedef struct __attribute__((packed))
     int16_t pitch_ctrl;
 
     PwmPayload_t pwm;
+
+    int16_t err_roll;     // deg*100
+    int16_t err_pitch;    // deg*100
+
+    int16_t u_roll;       // PWM units
+    int16_t u_pitch;      // PWM units
+    int16_t u_yaw;        // PWM units
+
+    uint16_t k_milli;     // k*1000
+    uint8_t  sat;         // 0/1
+    uint8_t  i_enabled;   // 0/1
 } TelemetryLvlPayload_t;
 
 #define TELEM_LVL_PAYLOAD_SIZE ((uint8_t)sizeof(TelemetryLvlPayload_t))
+
 
 
 /* ====== API ====== */

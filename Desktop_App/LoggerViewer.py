@@ -1,4 +1,3 @@
-import os, textwrap, pathlib, json, re
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import pandas as pd
@@ -18,27 +17,31 @@ REQUIRED_COLUMNS = [
     "roll_deg",
     "pitch_deg",
     "yaw_deg",
-    "roll_cal_deg",
-    "pitch_cal_deg",
     "pwm_lf",
     "pwm_rf",
     "pwm_lb",
     "pwm_rb",
 ]
 
-
-def _safe_float(x):
-    try:
-        return float(x)
-    except Exception:
-        return None
+OPTIONAL_COLUMNS = [
+    "roll_cal_deg",
+    "pitch_cal_deg",
+    "err_roll_deg",
+    "err_pitch_deg",
+    "u_roll",
+    "u_pitch",
+    "u_yaw",
+    "k",
+    "sat",
+    "i_enabled",
+]
 
 
 class LogViewerApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Drone Log Viewer (PWM/BASE + kąty + akcje)")
-        self.geometry("1200x750")
+        self.title("Drone Log Viewer (BASE/PWM + angles + debug)")
+        self.geometry("1280x780")
         self.minsize(980, 640)
 
         self.df = None
@@ -71,32 +74,83 @@ class LogViewerApp(tk.Tk):
 
         self.tab_plots = ttk.Frame(self.notebook)
         self.tab_angles = ttk.Frame(self.notebook)
+        self.tab_debug = ttk.Frame(self.notebook)
         self.tab_actions = ttk.Frame(self.notebook)
 
-        self.notebook.add(self.tab_plots, text="Wykresy (BASE + PWM)")
-        self.notebook.add(self.tab_angles, text="Kąty (surowe + kalibrowane)")
+        self.notebook.add(self.tab_plots, text="Wykresy")
+        self.notebook.add(self.tab_angles, text="Kąty")
+        self.notebook.add(self.tab_debug, text="Debug (PID/mixer)")
         self.notebook.add(self.tab_actions, text="Akcje")
 
         self._build_plots_tab()
         self._build_angles_tab()
+        self._build_debug_tab()
         self._build_actions_tab()
 
         self.status = ttk.Label(self, text="Gotowe.", anchor="w")
         self.status.pack(side=tk.BOTTOM, fill=tk.X)
 
+    def set_status(self, text):
+        self.status.config(text=text)
+        self.update_idletasks()
+
+    def open_file(self):
+        path = filedialog.askopenfilename(
+            title="Wybierz plik logu",
+            filetypes=[("CSV", "*.csv"), ("Wszystkie pliki", "*.*")],
+        )
+        if not path:
+            return
+        self.load_file(path)
+
+    def load_file(self, path):
+        self.set_status("Wczytuję plik…")
+        try:
+            df = pd.read_csv(path)
+        except Exception as e:
+            messagebox.showerror("Błąd", f"Nie udało się wczytać CSV:\n{e}")
+            self.set_status("Błąd wczytywania.")
+            return
+
+        missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
+        if missing:
+            messagebox.showerror(
+                "Niepoprawny format",
+                "Brak wymaganych kolumn:\n" + "\n".join(missing) + "\n\nDostępne kolumny:\n" + ", ".join(df.columns),
+            )
+            self.set_status("Niepoprawny format.")
+            return
+
+        df = df.copy()
+
+        for c in OPTIONAL_COLUMNS:
+            if c not in df.columns:
+                df[c] = pd.NA
+
+        df["t_s"] = pd.to_numeric(df["t_s"], errors="coerce")
+        df = df.dropna(subset=["t_s"]).sort_values("t_s").reset_index(drop=True)
+
+        for c in ["base", "action", "takeoff_on", "pwm_lf", "pwm_rf", "pwm_lb", "pwm_rb", "sat", "i_enabled"]:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+
+        for c in ["roll_deg", "pitch_deg", "yaw_deg", "roll_cal_deg", "pitch_cal_deg",
+                  "err_roll_deg", "err_pitch_deg", "k", "u_roll", "u_pitch", "u_yaw"]:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+
+        self.df = df
+        self.filepath = path
+        self.file_label.config(text=f"Plik: {path}")
+        self.set_status(f"Wczytano {len(df)} rekordów.")
+        self.refresh_all()
+
     def _build_plots_tab(self):
         container = ttk.Frame(self.tab_plots)
         container.pack(fill=tk.BOTH, expand=True)
 
-        self.fig = Figure(figsize=(8, 6), dpi=100)
-        self.ax_base = self.fig.add_subplot(211)
-        self.ax_pwm = self.fig.add_subplot(212, sharex=self.ax_base)
-
-        self.ax_base.set_title("BASE / Takeoff")
-        self.ax_base.set_ylabel("base")
-        self.ax_pwm.set_title("PWM")
-        self.ax_pwm.set_ylabel("pwm")
-        self.ax_pwm.set_xlabel("t_s [s]")
+        self.fig = Figure(figsize=(8, 7), dpi=100)
+        self.ax_base = self.fig.add_subplot(311)
+        self.ax_pwm = self.fig.add_subplot(312, sharex=self.ax_base)
+        self.ax_dbg = self.fig.add_subplot(313, sharex=self.ax_base)
 
         self.canvas = FigureCanvasTkAgg(self.fig, master=container)
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
@@ -104,13 +158,6 @@ class LogViewerApp(tk.Tk):
         toolbar = NavigationToolbar2Tk(self.canvas, container)
         toolbar.update()
         toolbar.pack(side=tk.TOP, fill=tk.X)
-
-        self._plots_hint = ttk.Label(
-            self.tab_plots,
-            text="Tip: scroll/zoom na wykresie działa przez pasek narzędzi Matplotlib.",
-            padding=(10, 0, 10, 10),
-        )
-        self._plots_hint.pack(side=tk.BOTTOM, fill=tk.X)
 
     def _build_angles_tab(self):
         outer = ttk.Frame(self.tab_angles)
@@ -125,6 +172,25 @@ class LogViewerApp(tk.Tk):
                 ("yaw_deg", "yaw_deg"),
                 ("roll_cal_deg", "roll_cal_deg"),
                 ("pitch_cal_deg", "pitch_cal_deg"),
+            ],
+        )
+
+    def _build_debug_tab(self):
+        outer = ttk.Frame(self.tab_debug)
+        outer.pack(fill=tk.BOTH, expand=True)
+
+        self.debug_tree = self._make_treeview(
+            outer,
+            columns=[
+                ("t_s", "t_s"),
+                ("err_roll_deg", "err_roll_deg"),
+                ("err_pitch_deg", "err_pitch_deg"),
+                ("u_roll", "u_roll"),
+                ("u_pitch", "u_pitch"),
+                ("u_yaw", "u_yaw"),
+                ("k", "k"),
+                ("sat", "sat"),
+                ("i_enabled", "i_enabled"),
             ],
         )
 
@@ -172,56 +238,20 @@ class LogViewerApp(tk.Tk):
 
         for col_id, col_title in columns:
             tree.heading(col_id, text=col_title)
-            tree.column(col_id, width=120, anchor="center", stretch=True)
+            tree.column(col_id, width=130, anchor="center", stretch=True)
 
         return tree
 
-    def set_status(self, text):
-        self.status.config(text=text)
-        self.update_idletasks()
-
-    def open_file(self):
-        path = filedialog.askopenfilename(
-            title="Wybierz plik logu",
-            filetypes=[("CSV", "*.csv"), ("Wszystkie pliki", "*.*")],
-        )
-        if not path:
-            return
-        self.load_file(path)
-
-    def load_file(self, path):
-        self.set_status("Wczytuję plik…")
-        try:
-            df = pd.read_csv(path)
-        except Exception as e:
-            messagebox.showerror("Błąd", f"Nie udało się wczytać CSV:\n{e}")
-            self.set_status("Błąd wczytywania.")
-            return
-
-        missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
-        if missing:
-            messagebox.showerror(
-                "Niepoprawny format",
-                "Brak wymaganych kolumn:\n" + "\n".join(missing) + "\n\nDostępne kolumny:\n" + ", ".join(df.columns),
-            )
-            self.set_status("Niepoprawny format.")
-            return
-
-        df = df.copy()
-        df["t_s"] = pd.to_numeric(df["t_s"], errors="coerce")
-        df = df.dropna(subset=["t_s"]).sort_values("t_s").reset_index(drop=True)
-
-        self.df = df
-        self.filepath = path
-        self.file_label.config(text=f"Plik: {path}")
-        self.set_status(f"Wczytano {len(df)} rekordów.")
-        self.refresh_all()
+    def _clear_tree(self, tree):
+        for iid in tree.get_children():
+            tree.delete(iid)
 
     def refresh_all(self):
         if self.df is None or self.df.empty:
             return
         self.refresh_plots()
         self.refresh_angles_table()
+        self.refresh_debug_table()
         self.refresh_actions_table()
 
     def refresh_plots(self):
@@ -230,33 +260,56 @@ class LogViewerApp(tk.Tk):
 
         self.ax_base.clear()
         self.ax_pwm.clear()
+        self.ax_dbg.clear()
 
-        self.ax_base.set_title("BASE / Takeoff")
+        self.ax_base.set_title("BASE / takeoff_on")
         self.ax_base.set_ylabel("base")
-        self.ax_pwm.set_title("PWM")
-        self.ax_pwm.set_ylabel("pwm")
-        self.ax_pwm.set_xlabel("t_s [s]")
-
         self.ax_base.plot(t, df["base"].values, label="base")
-        if "takeoff_on" in df.columns:
+        if df["takeoff_on"].notna().any():
             self.ax_base.plot(t, df["takeoff_on"].values, label="takeoff_on")
+        self.ax_base.grid(True, alpha=0.25)
         self.ax_base.legend(loc="upper right")
 
+        self.ax_pwm.set_title("PWM")
+        self.ax_pwm.set_ylabel("pwm")
         self.ax_pwm.plot(t, df["pwm_lf"].values, label="pwm_lf")
         self.ax_pwm.plot(t, df["pwm_rf"].values, label="pwm_rf")
         self.ax_pwm.plot(t, df["pwm_lb"].values, label="pwm_lb")
         self.ax_pwm.plot(t, df["pwm_rb"].values, label="pwm_rb")
+        self.ax_pwm.grid(True, alpha=0.25)
         self.ax_pwm.legend(loc="upper right")
 
-        self.ax_base.grid(True, alpha=0.25)
-        self.ax_pwm.grid(True, alpha=0.25)
+        self.ax_dbg.set_title("Debug: err/u/k/sat")
+        self.ax_dbg.set_xlabel("t_s [s]")
+
+        any_dbg = False
+        if df["err_roll_deg"].notna().any():
+            self.ax_dbg.plot(t, df["err_roll_deg"].values, label="err_roll_deg")
+            any_dbg = True
+        if df["err_pitch_deg"].notna().any():
+            self.ax_dbg.plot(t, df["err_pitch_deg"].values, label="err_pitch_deg")
+            any_dbg = True
+        if df["u_roll"].notna().any():
+            self.ax_dbg.plot(t, df["u_roll"].values, label="u_roll")
+            any_dbg = True
+        if df["u_pitch"].notna().any():
+            self.ax_dbg.plot(t, df["u_pitch"].values, label="u_pitch")
+            any_dbg = True
+        if df["k"].notna().any():
+            self.ax_dbg.plot(t, df["k"].values, label="k")
+            any_dbg = True
+        if df["sat"].notna().any():
+            self.ax_dbg.plot(t, df["sat"].values, label="sat")
+            any_dbg = True
+
+        if any_dbg:
+            self.ax_dbg.grid(True, alpha=0.25)
+            self.ax_dbg.legend(loc="upper right")
+        else:
+            self.ax_dbg.text(0.02, 0.5, "Brak kolumn debug w tym logu.", transform=self.ax_dbg.transAxes)
 
         self.fig.tight_layout()
         self.canvas.draw_idle()
-
-    def _clear_tree(self, tree):
-        for iid in tree.get_children():
-            tree.delete(iid)
 
     def refresh_angles_table(self):
         df = self.df
@@ -267,16 +320,47 @@ class LogViewerApp(tk.Tk):
         view = df[cols].copy()
 
         for _, row in view.iterrows():
+            def fmt(x):
+                return "" if pd.isna(x) else f"{float(x):.3f}"
             tree.insert(
                 "",
                 "end",
                 values=[
-                    f"{row['t_s']:.3f}",
-                    f"{row['roll_deg']:.3f}",
-                    f"{row['pitch_deg']:.3f}",
-                    f"{row['yaw_deg']:.3f}",
-                    f"{row['roll_cal_deg']:.3f}",
-                    f"{row['pitch_cal_deg']:.3f}",
+                    fmt(row["t_s"]),
+                    fmt(row["roll_deg"]),
+                    fmt(row["pitch_deg"]),
+                    fmt(row["yaw_deg"]),
+                    fmt(row["roll_cal_deg"]),
+                    fmt(row["pitch_cal_deg"]),
+                ],
+            )
+
+    def refresh_debug_table(self):
+        df = self.df
+        tree = self.debug_tree
+        self._clear_tree(tree)
+
+        cols = ["t_s", "err_roll_deg", "err_pitch_deg", "u_roll", "u_pitch", "u_yaw", "k", "sat", "i_enabled"]
+        view = df[cols].copy()
+
+        for _, row in view.iterrows():
+            def fmt(x):
+                return "" if pd.isna(x) else str(int(x)) if isinstance(x, (int,)) else f"{float(x):.3f}"
+            def fmt_int(x):
+                return "" if pd.isna(x) else str(int(float(x)))
+            tree.insert(
+                "",
+                "end",
+                values=[
+                    "" if pd.isna(row["t_s"]) else f"{float(row['t_s']):.3f}",
+                    "" if pd.isna(row["err_roll_deg"]) else f"{float(row['err_roll_deg']):.3f}",
+                    "" if pd.isna(row["err_pitch_deg"]) else f"{float(row['err_pitch_deg']):.3f}",
+                    "" if pd.isna(row["u_roll"]) else f"{int(float(row['u_roll'])):+d}",
+                    "" if pd.isna(row["u_pitch"]) else f"{int(float(row['u_pitch'])):+d}",
+                    "" if pd.isna(row["u_yaw"]) else f"{int(float(row['u_yaw'])):+d}",
+                    "" if pd.isna(row["k"]) else f"{float(row['k']):.3f}",
+                    fmt_int(row["sat"]),
+                    fmt_int(row["i_enabled"]),
                 ],
             )
 
@@ -317,9 +401,9 @@ class LogViewerApp(tk.Tk):
                     values=[
                         f"{row['start_t_s']:.3f}",
                         f"{row['end_t_s']:.3f}",
-                        str(int(row["action"])) if pd.notna(row["action"]) else "",
-                        row["action_name"],
-                        str(int(row["takeoff_on"])) if pd.notna(row["takeoff_on"]) else "",
+                        "" if pd.isna(row["action"]) else str(int(float(row["action"]))),
+                        str(row["action_name"]),
+                        "" if pd.isna(row["takeoff_on"]) else str(int(float(row["takeoff_on"]))),
                     ],
                 )
         else:
@@ -332,9 +416,9 @@ class LogViewerApp(tk.Tk):
                     values=[
                         f"{row['t_s']:.3f}",
                         "",
-                        str(int(row["action"])) if pd.notna(row["action"]) else "",
+                        "" if pd.isna(row["action"]) else str(int(float(row["action"]))),
                         str(row["action_name"]),
-                        str(int(row["takeoff_on"])) if pd.notna(row["takeoff_on"]) else "",
+                        "" if pd.isna(row["takeoff_on"]) else str(int(float(row["takeoff_on"]))),
                     ],
                 )
 

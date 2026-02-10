@@ -38,129 +38,96 @@ typedef enum {
 
 #define IMU_UPDATE_PERIOD_MS 10u
 
-// IMU quality gates / LPF
 #define ACC_LPF_CUTOFF_HZ  20.0f
 #define ACC_G_MIN          0.20f
 #define ACC_G_MAX          3.50f
 
-// Safety tilt kill
 #define TILT_KILL_DEG            35.0f
 #define TILT_UNKILL_DEG          25.0f
 #define TILT_KILL_DEBOUNCE_MS    50u
 #define TILT_UNKILL_HOLD_MS      300u
 
-// PWM range
 #define PWM_MIN 0
 #define PWM_MAX 10000
 #define PWM_STAB_FLOOR 0
 
-// =========================
-// STAB PID (START: delikatnie, pod pierwszy hover)
-// =========================
-#define STAB_KP_ROLL    22.0f
-#define STAB_KD_ROLL    6.5f
-#define STAB_KI_ROLL    0.25f
+#define STAB_KP_ROLL    26.0f
+#define STAB_KD_ROLL    7.0f
+#define STAB_KI_ROLL    0.45f
 
-#define STAB_KP_PITCH   22.0f
-#define STAB_KD_PITCH   6.5f
-#define STAB_KI_PITCH   0.25f
+#define STAB_KP_PITCH   26.0f
+#define STAB_KD_PITCH   9.0f
+#define STAB_KI_PITCH   0.45f
 
-// Limity regulatora (ile może dodać/odjąć od base)
-#define STAB_U_MAX      2200.0f
-#define STAB_I_MAX      1200.0f
+#define STAB_U_MAX      4200.0f
+#define STAB_I_MAX      5200.0f
 
-// =========================
-// YAW HOLD (żeby STOP nie dryfował)
-// =========================
 #define STAB_KFF_YAW       0.0f
-#define STAB_YAW_SIGN      1.0f
-#define STAB_YAW_MAX       450.0f
-#define STAB_YAW_I_MAX     350.0f
-#define STAB_KP_YAW_RATE   1.0f
+#define STAB_YAW_SIGN      -1.0f
+#define STAB_YAW_MAX       1500.0f
+#define STAB_YAW_I_MAX     2500.0f
+#define STAB_KP_YAW_RATE   5.0f
 #define STAB_KI_YAW_RATE   0.08f
 
-// =========================
-// Osie / znaki (NIE ruszamy Twoich SIGNów)
-// =========================
 #define IMU_SWAP_ROLL_PITCH  1
 
 #define STAB_ROLL_SIGN       1.0f
 #define STAB_PITCH_SIGN     -1.0f
 
-// Yaw mix (Twoja konfiguracja)
 #define YAW_CCW_IS_RF_LB     1
 #define YAW_MIX_FRONT_CCW_REAR_CW  1
 
-// =========================
-// Slew / reakcja na komendy
-// =========================
 #define CMD_TILT_SLEW_DEG_PER_S     80.0f
 #define CMD_YAW_SLEW_DPS_PER_S     900.0f
-#define BASE_SLEW_PWM_PER_S      12000.0f
+#define BASE_SLEW_PWM_PER_S      7000.0f
 #define NAV_BIAS_SLEW_PWM_PER_S    6000.0f
 
-// =========================
-// Motor kompensacje (START: wszystko równe)
-// =========================
-#define MOTOR_GAIN_LF   1.000f
+#define MOTOR_GAIN_LF   1.150f
 #define MOTOR_GAIN_LB   1.000f
-#define MOTOR_GAIN_RF   1.000f
-#define MOTOR_GAIN_RB   1.000f
+#define MOTOR_GAIN_RF   1.275f
+#define MOTOR_GAIN_RB   1.150f
 
-#define MOTOR_OFFS_LF   0.0f
+#define MOTOR_OFFS_LF   150.0f
 #define MOTOR_OFFS_LB   0.0f
-#define MOTOR_OFFS_RF   0.0f
-#define MOTOR_OFFS_RB   0.0f
+#define MOTOR_OFFS_RF   250.0f
+#define MOTOR_OFFS_RB   200.0f
 
-// =========================
-// Trims (START: zero)
-// =========================
-#define YAW_TRIM        0.0f
-#define ROLL_TRIM_DEG   0.0f
-#define PITCH_TRIM_DEG  0.0f
+#define YAW_TRIM        450.0f
+#define ROLL_TRIM_DEG   0.00f
+#define PITCH_TRIM_DEG  0.00f
 
-// =========================
-// Level calibracja
-// =========================
 #define LEVEL_CALIB_SAMPLES         200u
 #define LEVEL_CALIB_GYRO_MAX_DPS    2.5f
 #define LEVEL_CALIB_ACC_OK_REQUIRED 1
 
-// =========================
-// CG biasy (START: brak)
-// =========================
-#define CG_ROLL_BIAS_GROUND_PWM   -600
-#define CG_ROLL_BIAS_AIR_PWM      -180
+#define CG_ROLL_BIAS_GROUND_PWM   -215
+#define CG_ROLL_BIAS_AIR_PWM      -215
 
-#define CG_PITCH_BIAS_GROUND_PWM  -200
-#define CG_PITCH_BIAS_AIR_PWM     -60
+#define CG_PITCH_BIAS_GROUND_PWM  -75
+#define CG_PITCH_BIAS_AIR_PWM     -75
 
-// kiedy biasy/offsety mają się “włączać” (dla cgk/trimk)
 #define CG_BIAS_START_PWM   1400u
 #define CG_BIAS_FULL_PWM    3200u
 
-// =========================
-// Integrator enable (START: dopiero po oderwaniu)
-// =========================
-#define I_ENABLE_BASE_PWM   2600u
-#define I_DISABLE_BASE_PWM  2200u
+#define I_ENABLE_BASE_PWM   7800
+#define I_DISABLE_BASE_PWM  7400
 
-// =========================
-// NAV (na strojenie hover trzymaj STOP)
-// =========================
 #define NAV_TILT_DEG        10.0f
 #define NAV_YAW_RATE_DPS    180.0f
 #define NAV_THRUST_BIAS     0
 #define NAV_MIX_GAIN        1.0f
 
-// =========================
-// Anti-pivot takeoff blend (START: łagodnie, ale nie "muł")
-// =========================
-#define TAKEOFF_BLEND_START_PWM  2200.0f
-#define TAKEOFF_BLEND_FULL_PWM   4200.0f
-#define TAKEOFF_BLEND_MIN        1.00f
-/* USER CODE END PD */
+#define TAKEOFF_BLEND_START_PWM  0.0f
+#define TAKEOFF_BLEND_FULL_PWM   1.0f
+#define TAKEOFF_BLEND_MIN        1.0f
 
+#define ACT_ENABLE_BASE_PWM     7800u
+#define ACT_MAX_ANGLE_DEG       2.0f
+#define ACT_MAX_RATE_DPS        15.0f
+#define ACT_K                  4.0f
+#define ACT_MAX_BIAS_PWM       500.0f
+#define ACT_ERR_LPF_HZ          1.0f
+/* USER CODE END PD */
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
@@ -215,6 +182,27 @@ static volatile uint8_t g_level_calib_done = 0;
 static float g_level_sum_roll = 0.0f;
 static float g_level_sum_pitch = 0.0f;
 static uint16_t g_level_n = 0;
+
+static volatile int16_t  g_dbg_err_roll_cdeg  = 0;
+static volatile int16_t  g_dbg_err_pitch_cdeg = 0;
+
+static volatile int16_t  g_dbg_u_roll  = 0;
+static volatile int16_t  g_dbg_u_pitch = 0;
+static volatile int16_t  g_dbg_u_yaw   = 0;
+
+static volatile uint16_t g_dbg_k_milli = 1000;
+static volatile uint8_t  g_dbg_sat = 0;
+static volatile uint8_t  g_dbg_i_enabled = 0;
+
+static volatile float g_hover_ref_roll = 0.0f;
+static volatile float g_hover_ref_pitch = 0.0f;
+static volatile uint8_t g_hover_ref_valid = 0;
+
+static float g_act_bias_roll  = 0.0f;
+static float g_act_bias_pitch = 0.0f;
+
+static float g_act_err_roll_f  = 0.0f;
+static float g_act_err_pitch_f = 0.0f;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -301,6 +289,28 @@ static inline int32_t slew_i32(int32_t cur, int32_t target, float max_rate_per_s
     return cur + d;
 }
 
+static void GetCtrlAnglesNow(float *out_roll_ctrl_deg, float *out_pitch_ctrl_deg)
+{
+    float roll_raw  = (float)g_roll_deg;
+    float pitch_raw = (float)g_pitch_deg;
+
+    float roll_meas_raw, pitch_meas_raw;
+
+#if IMU_SWAP_ROLL_PITCH
+    roll_meas_raw  = pitch_raw - g_level_pitch_off;
+    pitch_meas_raw = roll_raw  - g_level_roll_off;
+#else
+    roll_meas_raw  = roll_raw  - g_level_roll_off;
+    pitch_meas_raw = pitch_raw - g_level_pitch_off;
+#endif
+
+    float roll_ctrl  = roll_meas_raw  * STAB_ROLL_SIGN;
+    float pitch_ctrl = pitch_meas_raw * STAB_PITCH_SIGN;
+
+    *out_roll_ctrl_deg  = roll_ctrl;
+    *out_pitch_ctrl_deg = pitch_ctrl;
+}
+
 static float Mixer_ComputeScale(int32_t base, float c_lf, float c_rf, float c_lb, float c_rb)
 {
     float k = 1.0f;
@@ -348,6 +358,88 @@ static float AirBlend(uint16_t base_pwm)
            ((float)TAKEOFF_BLEND_FULL_PWM  - (float)TAKEOFF_BLEND_START_PWM);
 }
 
+static void Manual_ApplyComp(uint16_t base_pwm, PwmPayload_t *out)
+{
+    if (base_pwm > PWM_MAX) base_pwm = PWM_MAX;
+
+    float base = (float)base_pwm;
+
+    float airk = AirBlend(base_pwm);
+    float cgk  = CgBiasScale(base_pwm);
+
+    float roll_bias_pwm  = lerp_f((float)CG_ROLL_BIAS_GROUND_PWM,
+                                  (float)CG_ROLL_BIAS_AIR_PWM,
+                                  airk);
+
+    float pitch_bias_pwm = lerp_f((float)CG_PITCH_BIAS_GROUND_PWM,
+                                  (float)CG_PITCH_BIAS_AIR_PWM,
+                                  airk);
+
+    float roll_bias  = roll_bias_pwm  * cgk;
+    float pitch_bias = pitch_bias_pwm * cgk;
+
+    float b_lf = base + pitch_bias + roll_bias;
+    float b_rf = base + pitch_bias - roll_bias;
+    float b_lb = base - pitch_bias + roll_bias;
+    float b_rb = base - pitch_bias - roll_bias;
+
+    float trimk = cgk;
+
+    float out_lf_f = b_lf * MOTOR_GAIN_LF + MOTOR_OFFS_LF * trimk;
+    float out_rf_f = b_rf * MOTOR_GAIN_RF + MOTOR_OFFS_RF * trimk;
+    float out_lb_f = b_lb * MOTOR_GAIN_LB + MOTOR_OFFS_LB * trimk;
+    float out_rb_f = b_rb * MOTOR_GAIN_RB + MOTOR_OFFS_RB * trimk;
+
+    float max_out = fmaxf(fmaxf(out_lf_f, out_rf_f), fmaxf(out_lb_f, out_rb_f));
+    if (max_out > (float)PWM_MAX)
+    {
+        float d = max_out - (float)PWM_MAX;
+        out_lf_f -= d;
+        out_rf_f -= d;
+        out_lb_f -= d;
+        out_rb_f -= d;
+    }
+
+    float min_out = fminf(fminf(out_lf_f, out_rf_f), fminf(out_lb_f, out_rb_f));
+    if (min_out < (float)PWM_STAB_FLOOR)
+    {
+        float d = (float)PWM_STAB_FLOOR - min_out;
+        out_lf_f += d;
+        out_rf_f += d;
+        out_lb_f += d;
+        out_rb_f += d;
+    }
+
+    int32_t lf = (int32_t)lroundf(out_lf_f);
+    int32_t rf = (int32_t)lroundf(out_rf_f);
+    int32_t lb = (int32_t)lroundf(out_lb_f);
+    int32_t rb = (int32_t)lroundf(out_rb_f);
+
+    out->motor_lf = clamp_u16(lf, PWM_STAB_FLOOR, PWM_MAX);
+    out->motor_rf = clamp_u16(rf, PWM_STAB_FLOOR, PWM_MAX);
+    out->motor_lb = clamp_u16(lb, PWM_STAB_FLOOR, PWM_MAX);
+    out->motor_rb = clamp_u16(rb, PWM_STAB_FLOOR, PWM_MAX);
+}
+
+static void ACT_Reset(void)
+{
+    g_act_bias_roll  = 0.0f;
+    g_act_bias_pitch = 0.0f;
+    g_act_err_roll_f  = 0.0f;
+    g_act_err_pitch_f = 0.0f;
+}
+
+static int ACT_ConditionsOk(uint16_t base_pwm)
+{
+    if (base_pwm < ACT_ENABLE_BASE_PWM) return 0;
+    if (!g_att_valid) return 0;
+    if (g_tilt_kill) return 0;
+    if (fabsf(g_roll_deg)  > ACT_MAX_ANGLE_DEG) return 0;
+    if (fabsf(g_pitch_deg) > ACT_MAX_ANGLE_DEG) return 0;
+    if (fabsf(g_gyro_roll_dps)  > ACT_MAX_RATE_DPS) return 0;
+    if (fabsf(g_gyro_pitch_dps) > ACT_MAX_RATE_DPS) return 0;
+    return 1;
+}
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -449,9 +541,16 @@ static void IMU_Init(void)
     g_cmd_pitch_deg = 0.0f;
     g_cmd_yaw_rate_dps = 0.0f;
 
-    g_target_cmd_roll_deg = 0.0f;
+    float r0, p0;
+    GetCtrlAnglesNow(&r0, &p0);
+
+    g_target_cmd_roll_deg  = 0.0f;
     g_target_cmd_pitch_deg = 0.0f;
     g_target_cmd_yaw_rate_dps = 0.0f;
+
+    g_cmd_roll_deg  = r0;
+    g_cmd_pitch_deg = p0;
+    g_cmd_yaw_rate_dps = 0.0f;
 
     g_stab_base_pwm = 0;
     g_target_base_pwm = 0;
@@ -474,6 +573,7 @@ static void IMU_Init(void)
     g_level_n = 0;
 
     HAL_GPIO_WritePin(LED_SIGNAL_GPIO_Port, LED_SIGNAL_Pin, 0);
+    ACT_Reset();
 }
 
 static void PWM_StartAll(void)
@@ -716,8 +816,11 @@ static void ControlStep_Stabilize(void)
     float cmd_roll  = g_cmd_roll_deg  + ROLL_TRIM_DEG;
     float cmd_pitch = g_cmd_pitch_deg + PITCH_TRIM_DEG;
 
-    float err_roll  = cmd_roll  - roll_meas;
-    float err_pitch = cmd_pitch - pitch_meas;
+    float ref_roll  = g_hover_ref_valid ? g_hover_ref_roll  : cmd_roll;
+    float ref_pitch = g_hover_ref_valid ? g_hover_ref_pitch : cmd_pitch;
+
+    float err_roll  = ref_roll  - roll_meas;
+    float err_pitch = ref_pitch - pitch_meas;
 
     float u_roll_pd  = STAB_KP_ROLL  * err_roll  - STAB_KD_ROLL  * roll_rate;
     float u_pitch_pd = STAB_KP_PITCH * err_pitch - STAB_KD_PITCH * pitch_rate;
@@ -768,15 +871,28 @@ static void ControlStep_Stabilize(void)
     u_yaw_total *= blend;
     u_yaw_total = clamp_f(u_yaw_total, -STAB_YAW_MAX, STAB_YAW_MAX);
 
+    if (ACT_ConditionsOk(g_stab_base_pwm))
+    {
+        float a = lpf_alpha(dt, ACT_ERR_LPF_HZ);
+        g_act_err_roll_f  += a * (err_roll  - g_act_err_roll_f);
+        g_act_err_pitch_f += a * (err_pitch - g_act_err_pitch_f);
+
+        g_act_bias_roll  += ACT_K * g_act_err_roll_f  * dt;
+        g_act_bias_pitch += ACT_K * g_act_err_pitch_f * dt;
+
+        g_act_bias_roll  = clamp_f(g_act_bias_roll,  -ACT_MAX_BIAS_PWM, ACT_MAX_BIAS_PWM);
+        g_act_bias_pitch = clamp_f(g_act_bias_pitch, -ACT_MAX_BIAS_PWM, ACT_MAX_BIAS_PWM);
+    }
+
     float airk = AirBlend(g_stab_base_pwm);
     u_yaw_total *= airk;
 
     int32_t base = (int32_t)g_stab_base_pwm;
 
-    float c_lf = (-u_pitch + u_roll);
-    float c_rf = (-u_pitch - u_roll);
-    float c_lb = ( u_pitch + u_roll);
-    float c_rb = ( u_pitch - u_roll);
+    float c_lf = (-u_pitch + u_roll) + (-g_act_bias_pitch + g_act_bias_roll);
+    float c_rf = (-u_pitch - u_roll) + (-g_act_bias_pitch - g_act_bias_roll);
+    float c_lb = ( u_pitch + u_roll) + ( g_act_bias_pitch + g_act_bias_roll);
+    float c_rb = ( u_pitch - u_roll) + ( g_act_bias_pitch - g_act_bias_roll);
 
     float nav = (float)g_nav_bias * NAV_MIX_GAIN;
     switch ((uint8_t)g_last_nav_action)
@@ -826,24 +942,33 @@ static void ControlStep_Stabilize(void)
     float k = Mixer_ComputeScale(base, c_lf, c_rf, c_lb, c_rb);
     int sat = (k < 0.999f) ? 1 : 0;
 
-    if (!sat && g_i_enabled)
+    if (g_i_enabled)
     {
-        i_roll  += err_roll  * dt;
-        i_pitch += err_pitch * dt;
+        float leak = sat ? 0.15f : 0.0f;
+
+        float i_gain_roll  = clamp_f(1.0f - fabsf(err_roll)  / 10.0f, 0.2f, 1.0f);
+        float i_gain_pitch = clamp_f(1.0f - fabsf(err_pitch) / 10.0f, 0.2f, 1.0f);
+
+        i_roll  += err_roll  * dt * i_gain_roll;
+        i_pitch += err_pitch * dt * i_gain_pitch;
         i_yaw   += yaw_rate_err * dt;
 
         i_roll  = clamp_f(i_roll,  -STAB_I_MAX, STAB_I_MAX);
         i_pitch = clamp_f(i_pitch, -STAB_I_MAX, STAB_I_MAX);
         i_yaw   = clamp_f(i_yaw,   -STAB_YAW_I_MAX, STAB_YAW_I_MAX);
+
+        if (leak > 0.0f)
+        {
+            i_roll  *= (1.0f - leak * dt);
+            i_pitch *= (1.0f - leak * dt);
+            i_yaw   *= (1.0f - leak * dt);
+        }
     }
     else
     {
-        if (!g_i_enabled)
-        {
-            i_roll  *= (1.0f - 0.8f * dt);
-            i_pitch *= (1.0f - 0.8f * dt);
-            i_yaw   *= (1.0f - 0.8f * dt);
-        }
+        i_roll  *= (1.0f - 0.8f * dt);
+        i_pitch *= (1.0f - 0.8f * dt);
+        i_yaw   *= (1.0f - 0.8f * dt);
     }
 
     float mix_lf = k * c_lf;
@@ -888,6 +1013,19 @@ static void ControlStep_Stabilize(void)
     out.motor_rf = clamp_u16(rf, PWM_STAB_FLOOR, PWM_MAX);
     out.motor_lb = clamp_u16(lb, PWM_STAB_FLOOR, PWM_MAX);
     out.motor_rb = clamp_u16(rb, PWM_STAB_FLOOR, PWM_MAX);
+
+    g_dbg_err_roll_cdeg  = (int16_t)lroundf(clamp_f(err_roll,  -327.0f, 327.0f) * 100.0f);
+    g_dbg_err_pitch_cdeg = (int16_t)lroundf(clamp_f(err_pitch, -327.0f, 327.0f) * 100.0f);
+
+    g_dbg_u_roll  = (int16_t)lroundf(clamp_f(u_roll,  -32767.0f, 32767.0f));
+    g_dbg_u_pitch = (int16_t)lroundf(clamp_f(u_pitch, -32767.0f, 32767.0f));
+    g_dbg_u_yaw   = (int16_t)lroundf(clamp_f(u_yaw_total, -32767.0f, 32767.0f));
+
+    float kk = clamp_f(k, 0.0f, 1.0f);
+    g_dbg_k_milli = (uint16_t)lroundf(kk * 1000.0f);
+
+    g_dbg_sat = (uint8_t)(sat ? 1 : 0);
+    g_dbg_i_enabled = (uint8_t)(g_i_enabled ? 1 : 0);
 
     SetPwm(&out);
 }
@@ -963,8 +1101,8 @@ int main(void)
           }
           else
           {
-            PwmPayload_t pwm;
-            memcpy(&pwm, rx->data, PWM_PAYLOAD_SIZE);
+            PwmPayload_t pwm_in;
+            memcpy(&pwm_in, rx->data, PWM_PAYLOAD_SIZE);
 
             g_ctrl_mode = CTRL_MANUAL;
 
@@ -984,9 +1122,18 @@ int main(void)
             i_yaw = 0.0f;
             g_i_enabled = 0;
 
-            SetPwm(&pwm);
+            uint32_t sum = (uint32_t)pwm_in.motor_lf + (uint32_t)pwm_in.motor_rf +
+                           (uint32_t)pwm_in.motor_lb + (uint32_t)pwm_in.motor_rb;
+            uint16_t base = (uint16_t)(sum / 4u);
+
+            PwmPayload_t pwm_out;
+            Manual_ApplyComp(base, &pwm_out);
+            SetPwm(&pwm_out);
+
             tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_PWM_ACK, NULL, 0, tx, sizeof(tx));
           }
+
+          ACT_Reset();
         }
         else if (rx->cmd == CMD_IMU_READ)
         {
@@ -1060,6 +1207,17 @@ int main(void)
                 tp.roll_ctrl  = (int16_t)lroundf(roll_ctrl  * 100.0f);
                 tp.pitch_ctrl = (int16_t)lroundf(pitch_ctrl * 100.0f);
 
+                tp.err_roll  = g_dbg_err_roll_cdeg;
+                tp.err_pitch = g_dbg_err_pitch_cdeg;
+
+                tp.u_roll = g_dbg_u_roll;
+                tp.u_pitch = g_dbg_u_pitch;
+                tp.u_yaw = g_dbg_u_yaw;
+
+                tp.k_milli = g_dbg_k_milli;
+                tp.sat = g_dbg_sat;
+                tp.i_enabled = g_dbg_i_enabled;
+
                 ReadPwm(&tp.pwm);
 
                 tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_TELEM_LVL_DATA,
@@ -1086,9 +1244,19 @@ int main(void)
             g_target_base_pwm = sp.base_pwm;
             g_ctrl_mode = CTRL_STAB;
             if (g_level_calib_done) g_armed = 1;
-            else g_armed = 0;
+            else {
+                g_armed = 0;
+                ACT_Reset();
+            }
 
-            g_target_cmd_roll_deg  = 0.0f;
+            float r0, p0;
+            GetCtrlAnglesNow(&r0, &p0);
+
+            g_cmd_roll_deg  = r0;
+            g_cmd_pitch_deg = p0;
+            g_cmd_yaw_rate_dps = 0.0f;
+
+            g_target_cmd_roll_deg = 0.0f;
             g_target_cmd_pitch_deg = 0.0f;
             g_target_cmd_yaw_rate_dps = 0.0f;
 
@@ -1120,6 +1288,8 @@ int main(void)
 
           PWM_SetSafe();
           tx_len = Protocol_BuildFrame(DIR_STM_TO_PC, CMD_STAB_OFF_ACK, NULL, 0, tx, sizeof(tx));
+
+          ACT_Reset();
         }
         else if (rx->cmd == CMD_NAV_SET)
         {
@@ -1141,10 +1311,11 @@ int main(void)
             g_ctrl_mode = CTRL_STAB;
 
             if (g_level_calib_done)
-            	g_armed = 1;
+                g_armed = 1;
             else {
-            	g_armed = 0;
-            	PWM_SetSafe();
+                g_armed = 0;
+                PWM_SetSafe();
+                ACT_Reset();
             }
 
             g_last_nav_action = np.action;
@@ -1157,19 +1328,28 @@ int main(void)
                 g_i_enabled = 0;
             }
 
-            g_target_cmd_roll_deg  = 0.0f;
-            g_target_cmd_pitch_deg = 0.0f;
+            float r0, p0;
+            GetCtrlAnglesNow(&r0, &p0);
+
+            g_cmd_roll_deg  = r0;
+            g_cmd_pitch_deg = p0;
+            g_cmd_yaw_rate_dps = 0.0f;
+
+            float r_level = 0.0f;
+            float p_level = 0.0f;
+
+            g_target_cmd_roll_deg = r_level;
+            g_target_cmd_pitch_deg = p_level;
             g_target_cmd_yaw_rate_dps = 0.0f;
 
             switch ((uint8_t)np.action)
             {
-              case NAV_STOP: break;
-              case NAV_FORWARD:   g_target_cmd_pitch_deg = -NAV_TILT_DEG; break;
-              case NAV_BACK:      g_target_cmd_pitch_deg = +NAV_TILT_DEG; break;
-              case NAV_LEFT:      g_target_cmd_roll_deg  = -NAV_TILT_DEG; break;
-              case NAV_RIGHT:     g_target_cmd_roll_deg  = +NAV_TILT_DEG; break;
+              case NAV_STOP:      g_target_cmd_yaw_rate_dps = 0.0f; break;
+              case NAV_FORWARD:   g_target_cmd_pitch_deg = (p_level - NAV_TILT_DEG); break;
+              case NAV_BACK:      g_target_cmd_pitch_deg = (p_level + NAV_TILT_DEG); break;
+              case NAV_LEFT:      g_target_cmd_roll_deg  = (r_level - NAV_TILT_DEG); break;
+              case NAV_RIGHT:     g_target_cmd_roll_deg  = (r_level + NAV_TILT_DEG); break;
 
-              // FIX: yaw left/right were swapped in behavior -> swap signs here
               case NAV_YAW_LEFT:  g_target_cmd_yaw_rate_dps = +NAV_YAW_RATE_DPS; break;
               case NAV_YAW_RIGHT: g_target_cmd_yaw_rate_dps = -NAV_YAW_RATE_DPS; break;
 
@@ -1225,7 +1405,6 @@ void SystemClock_Config(void)
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK) { Error_Handler(); }
 }
 
-/* USER CODE BEGIN 4 */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
   if (huart == &huart6)
@@ -1248,7 +1427,6 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     HAL_UART_Receive_IT(&huart6, &uart_rx_it_byte, 1);
   }
 }
-/* USER CODE END 4 */
 
 void Error_Handler(void)
 {
@@ -1263,3 +1441,4 @@ void assert_failed(uint8_t *file, uint32_t line)
   (void)line;
 }
 #endif
+/* USER CODE END 0 */

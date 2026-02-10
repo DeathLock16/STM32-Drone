@@ -170,6 +170,20 @@ class App:
         self.ang_pitch_cal = tk.StringVar(value="--.-")
         self.ang_yaw_cal   = tk.StringVar(value="--.-")
 
+        self.dbg_err_roll  = tk.StringVar(value="--.-")
+        self.dbg_err_pitch = tk.StringVar(value="--.-")
+
+        self.dbg_u_roll  = tk.StringVar(value="----")
+        self.dbg_u_pitch = tk.StringVar(value="----")
+        self.dbg_u_yaw   = tk.StringVar(value="----")
+
+        self.dbg_k       = tk.StringVar(value="---.-")
+        self.dbg_sat     = tk.StringVar(value="-")
+        self.dbg_i_en    = tk.StringVar(value="-")
+
+        self.weak_motor = tk.StringVar(value="--")
+        self.weak_motor_dbg = tk.StringVar(value="")
+
         # ---- DATA LOGGING ----
         self.data_lock = threading.Lock()
         self.data_rows = []
@@ -241,6 +255,15 @@ class App:
         controls = ttk.Frame(top_right)
         controls.pack(side="left", anchor="n")
 
+        weak_box = ttk.LabelFrame(controls, text="Weak motor (estimated)", padding=6)
+        weak_box.grid(row=3, column=0, columnspan=3, sticky="we", padx=4, pady=(10, 0))
+
+        lbl = tk.Label(weak_box, textvariable=self.weak_motor, fg="red", font=("TkDefaultFont", 14, "bold"))
+        lbl.pack(anchor="w")
+
+        lbl2 = ttk.Label(weak_box, textvariable=self.weak_motor_dbg)
+        lbl2.pack(anchor="w")
+
         self.btn_yawl = ttk.Button(controls, text="⟲", width=6, command=lambda: self.send_nav(NAV_YAW_LEFT), state="disabled")
         self.btn_fwd  = ttk.Button(controls, text="↑",  width=6, command=lambda: self.send_nav(NAV_FORWARD), state="disabled")
         self.btn_yawr = ttk.Button(controls, text="⟳", width=6, command=lambda: self.send_nav(NAV_YAW_RIGHT), state="disabled")
@@ -262,7 +285,7 @@ class App:
         self.btn_back.grid(row=2, column=1, padx=4, pady=4)
 
         imu_box = ttk.LabelFrame(controls, text="IMU angles (deg)", padding=6)
-        imu_box.grid(row=3, column=0, columnspan=3, sticky="we", padx=4, pady=(10, 0))
+        imu_box.grid(row=4, column=0, columnspan=3, sticky="we", padx=4, pady=(10, 0))
 
         # nagłówki
         ttk.Label(imu_box, text="", width=8).grid(row=0, column=0, sticky="w")
@@ -283,6 +306,33 @@ class App:
         ttk.Label(imu_box, text="YAW").grid(row=3, column=0, sticky="w")
         ttk.Label(imu_box, textvariable=self.ang_yaw_raw).grid(row=3, column=1, sticky="w")
         ttk.Label(imu_box, textvariable=self.ang_yaw_cal).grid(row=3, column=2, sticky="w")
+
+        dbg_box = ttk.LabelFrame(controls, text="CTRL debug", padding=6)
+        dbg_box.grid(row=5, column=0, columnspan=3, sticky="we", padx=4, pady=(10, 0))
+
+        ttk.Label(dbg_box, text="err_roll").grid(row=0, column=0, sticky="w")
+        ttk.Label(dbg_box, textvariable=self.dbg_err_roll).grid(row=0, column=1, sticky="w")
+
+        ttk.Label(dbg_box, text="err_pitch").grid(row=1, column=0, sticky="w")
+        ttk.Label(dbg_box, textvariable=self.dbg_err_pitch).grid(row=1, column=1, sticky="w")
+
+        ttk.Label(dbg_box, text="u_roll").grid(row=2, column=0, sticky="w")
+        ttk.Label(dbg_box, textvariable=self.dbg_u_roll).grid(row=2, column=1, sticky="w")
+
+        ttk.Label(dbg_box, text="u_pitch").grid(row=3, column=0, sticky="w")
+        ttk.Label(dbg_box, textvariable=self.dbg_u_pitch).grid(row=3, column=1, sticky="w")
+
+        ttk.Label(dbg_box, text="u_yaw").grid(row=4, column=0, sticky="w")
+        ttk.Label(dbg_box, textvariable=self.dbg_u_yaw).grid(row=4, column=1, sticky="w")
+
+        ttk.Label(dbg_box, text="k").grid(row=5, column=0, sticky="w")
+        ttk.Label(dbg_box, textvariable=self.dbg_k).grid(row=5, column=1, sticky="w")
+
+        ttk.Label(dbg_box, text="sat").grid(row=6, column=0, sticky="w")
+        ttk.Label(dbg_box, textvariable=self.dbg_sat).grid(row=6, column=1, sticky="w")
+
+        ttk.Label(dbg_box, text="i_en").grid(row=7, column=0, sticky="w")
+        ttk.Label(dbg_box, textvariable=self.dbg_i_en).grid(row=7, column=1, sticky="w")
 
         plot_box = ttk.LabelFrame(top_right, text="PWM (live)", padding=6)
         plot_box.pack(side="left", fill="both", expand=True, padx=(10,0))
@@ -308,6 +358,38 @@ class App:
         self.log = ScrolledText(log_box, height=12, wrap="word", state="disabled")
         self.log.pack(fill="both", expand=True)
 
+    def estimate_weak_motor(self, roll_cal_deg, pitch_cal_deg):
+        if roll_cal_deg is None or pitch_cal_deg is None:
+            return "--", ""
+
+        r = float(roll_cal_deg)
+        p = float(pitch_cal_deg)
+
+        dead = 0.5
+        if abs(r) < dead and abs(p) < dead:
+            return "--", f"r={r:+.1f} p={p:+.1f} (flat)"
+
+        score = {
+            "RF": ( r + p),
+            "RB": ( r - p),
+            "LF": (-r + p),
+            "LB": (-r - p),
+        }
+
+        ordered = sorted(score.items(), key=lambda kv: kv[1], reverse=True)
+        best_m, best_s = ordered[0]
+        second_s = ordered[1][1]
+
+        # próg pewności
+        if best_s < 0.8:
+            return "--", f"r={r:+.1f} p={p:+.1f} (low tilt)"
+
+        # jeśli niepewne (prawie remis), pokaż znak zapytania
+        if (best_s - second_s) < 0.4:
+            return best_m + "?", f"r={r:+.1f} p={p:+.1f} (amb)"
+
+        return best_m, f"r={r:+.1f} p={p:+.1f}"
+
     def _on_slider(self, _=None):
         if self.tilt_killed:
             self.log_put("PANIC_KILLED: sterowanie zablokowane (zresetuj aplikację / dodaj reset).")
@@ -323,11 +405,21 @@ class App:
         if self.takeoff_on:
             return
 
-        base = int(self.pwm_var.get())
-        payload = struct.pack("<HB", base, int(self.desired_action))
-        self.send_frame(CMD_NAV_SET, payload)
+        if self.tilt_killed:
+            self.log_put("PANIC_KILLED: sterowanie zablokowane (zresetuj aplikację / dodaj reset).")
+            return
 
-        self.log_put(f"TX: NAV (slider release) act={self.desired_action} base={base}")
+        val = int(self.pwm_var.get())
+
+        # MANUAL: wyślij CMD_PWM_SET (bez autokorekcji)
+        payload = struct.pack("<HHHH", val, val, val, val)
+        self.send_frame(CMD_PWM_SET, payload)
+
+        # opcjonalnie: żeby log i CSV miały sens
+        self.current_base_sent = val
+        self.desired_action = NAV_STOP
+
+        self.log_put(f"TX: MANUAL (slider release) PWM={val}")
 
     def log_put(self, msg):
         self.log_q.put(msg)
@@ -586,7 +678,9 @@ class App:
 
             self.btn_takeoff.config(text="TAKEOFF (smooth)")
 
-    def _append_telem_row(self, t_s, roll, pitch, yaw, roll_cal, pitch_cal, lf, rf, lb, rb):
+    def _append_telem_row(self, t_s, roll, pitch, yaw, roll_cal, pitch_cal, lf, rf, lb, rb,
+                        err_roll=None, err_pitch=None, u_roll=None, u_pitch=None, u_yaw=None,
+                        k=None, sat=None, i_enabled=None):
         with self.data_lock:
             self.data_rows.append({
                 "t_s": t_s,
@@ -606,6 +700,17 @@ class App:
                 "pwm_rf": int(rf),
                 "pwm_lb": int(lb),
                 "pwm_rb": int(rb),
+
+                "err_roll_deg": (None if err_roll is None else float(err_roll)),
+                "err_pitch_deg": (None if err_pitch is None else float(err_pitch)),
+
+                "u_roll": (None if u_roll is None else int(u_roll)),
+                "u_pitch": (None if u_pitch is None else int(u_pitch)),
+                "u_yaw": (None if u_yaw is None else int(u_yaw)),
+
+                "k": (None if k is None else float(k)),
+                "sat": (None if sat is None else int(sat)),
+                "i_enabled": (None if i_enabled is None else int(i_enabled)),
             })
 
     def export_csv(self):
@@ -640,6 +745,14 @@ class App:
             "pwm_rf",
             "pwm_lb",
             "pwm_rb",
+            "err_roll_deg",
+            "err_pitch_deg",
+            "u_roll",
+            "u_pitch",
+            "u_yaw",
+            "k",
+            "sat",
+            "i_enabled",
         ]
 
         try:
@@ -669,127 +782,175 @@ class App:
 
             frames, self.rx_buf = parse_stream(self.rx_buf)
             for cmd, payload in frames:
-                if cmd == CMD_PONG:
-                    self.log_put("RX: PONG ✓")
+                try:
+                    if cmd == CMD_PONG:
+                        self.log_put("RX: PONG ✓")
 
-                elif cmd == CMD_PWM_ACK:
-                    self.log_put("RX: PWM ACK ✓")
+                    elif cmd == CMD_PWM_ACK:
+                        self.log_put("RX: PWM ACK ✓")
 
-                elif cmd == CMD_NAV_ACK:
-                    if len(payload) == 3:
-                        base, act = struct.unpack("<HB", payload)
-                        self.current_base_sent = base
-                        self.log_put(f"RX: NAV ACK ✓ base={base} act={act}")
+                    elif cmd == CMD_NAV_ACK:
+                        if len(payload) == 3:
+                            base, act = struct.unpack("<HB", payload)
+                            self.current_base_sent = base
+                            self.log_put(f"RX: NAV ACK ✓ base={base} act={act}")
+                        else:
+                            self.log_put("RX: NAV ACK ✓")
+
+                    elif cmd == CMD_PWM_DATA:
+                        if len(payload) == 8:
+                            lb, lf, rf, rb = struct.unpack("<HHHH", payload)
+                            self.last_pwm = {"LF": lf, "RF": rf, "LB": lb, "RB": rb}
+
+                            t = time.monotonic() - self.t0
+                            self.t_hist.append(t)
+                            self.pwm_hist["LF"].append(lf)
+                            self.pwm_hist["RF"].append(rf)
+                            self.pwm_hist["LB"].append(lb)
+                            self.pwm_hist["RB"].append(rb)
+                        else:
+                            self.log_put(f"RX: PWM DATA bad len={len(payload)}")
+
+                    elif cmd == CMD_STAB_OFF_ACK:
+                        self.log_put("RX: STAB_OFF ACK ✓")
+
+                    elif cmd == CMD_STATUS and len(payload) == 1:
+                        err = payload[0]
+                        self.log_put("RX STATUS: " + STATUS_STR.get(err, f"0x{err:02X}"))
+
+                    elif cmd == CMD_IMU_DATA:
+                        if len(payload) == 6:
+                            roll, pitch, yaw = struct.unpack("<hhh", payload)
+                            r = roll / 100.0
+                            p = pitch / 100.0
+                            y = yaw / 100.0
+                            self.last_imu = {"roll": r, "pitch": p, "yaw": y}
+                            self.log_put(f"RX IMU: R={r:.1f} P={p:.1f} Y={y:.1f}")
+
+                            self.root.after(0, lambda rr=r, pp=p, yy=y: (
+                                self.ang_roll_raw.set(f"{rr:+.1f}"),
+                                self.ang_pitch_raw.set(f"{pp:+.1f}"),
+                                self.ang_yaw_raw.set(f"{yy:+.1f}"),
+                            ))
+                        else:
+                            self.log_put(f"RX: IMU bad len={len(payload)}")
+
+                    elif cmd == CMD_TELEM_DATA:
+                        # TELEM = imu(6) + pwm(8) = 14
+                        if len(payload) == 14:
+                            roll, pitch, yaw, lb, lf, rf, rb = struct.unpack("<hhhHHHH", payload)
+
+                            r = roll / 100.0
+                            p = pitch / 100.0
+                            y = yaw / 100.0
+                            self.last_imu = {"roll": r, "pitch": p, "yaw": y}
+
+                            self.root.after(0, lambda rr=r, pp=p, yy=y: (
+                                self.ang_roll_raw.set(f"{rr:+.1f}"),
+                                self.ang_pitch_raw.set(f"{pp:+.1f}"),
+                                self.ang_yaw_raw.set(f"{yy:+.1f}"),
+                                self.ang_roll_cal.set("--.-"),
+                                self.ang_pitch_cal.set("--.-"),
+                                self.ang_yaw_cal.set("--.-"),
+                            ))
+
+                            self.last_pwm = {"LF": lf, "RF": rf, "LB": lb, "RB": rb}
+
+                            t = time.monotonic() - self.t0
+                            self.t_hist.append(t)
+                            self.pwm_hist["LF"].append(lf)
+                            self.pwm_hist["RF"].append(rf)
+                            self.pwm_hist["LB"].append(lb)
+                            self.pwm_hist["RB"].append(rb)
+
+                            # log row (bez debugów)
+                            self._append_telem_row(t, r, p, y, None, None, lf, rf, lb, rb)
+
+                            if abs(r) >= self.tilt_kill_deg or abs(p) >= self.tilt_kill_deg:
+                                self.panic_kill(f"TILT {r:+.1f}/{p:+.1f} deg")
+
+                        else:
+                            self.log_put(f"RX: TELEM bad len={len(payload)}")
+
+                    elif cmd == CMD_TELEM_LVL_DATA:
+                        # TelemetryLvlPayload_t = 36B
+                        if len(payload) == 36:
+                            (roll, pitch, yaw,
+                            roll_lvl, pitch_lvl,
+                            roll_ctrl, pitch_ctrl,
+                            lb, lf, rf, rb,
+                            err_roll, err_pitch,
+                            u_roll, u_pitch, u_yaw,
+                            k_milli, sat, i_en) = struct.unpack("<hhhhhhhHHHHhhhhhHBB", payload)
+
+                            r = roll / 100.0
+                            p = pitch / 100.0
+                            y = yaw / 100.0
+
+                            rc = roll_ctrl / 100.0
+                            pc = pitch_ctrl / 100.0
+
+                            motor, dbg = self.estimate_weak_motor(rc, pc)
+                            self.root.after(0, lambda m=motor, d=dbg: (
+                                self.weak_motor.set(m),
+                                self.weak_motor_dbg.set(d),
+                            ))
+
+                            er = err_roll / 100.0
+                            ep = err_pitch / 100.0
+
+                            kk = k_milli / 1000.0
+
+                            self.root.after(0, lambda rr=r, pp=p, yy=y, rrc=rc, ppc=pc,
+                                                eer=er, eep=ep, uu_r=u_roll, uu_p=u_pitch, uu_y=u_yaw,
+                                                kkk=kk, ss=sat, ie=i_en: (
+                                self.ang_roll_raw.set(f"{rr:+.1f}"),
+                                self.ang_pitch_raw.set(f"{pp:+.1f}"),
+                                self.ang_yaw_raw.set(f"{yy:+.1f}"),
+
+                                self.ang_roll_cal.set(f"{rrc:+.1f}"),
+                                self.ang_pitch_cal.set(f"{ppc:+.1f}"),
+                                self.ang_yaw_cal.set(f"{yy:+.1f}"),
+
+                                self.dbg_err_roll.set(f"{eer:+.1f}"),
+                                self.dbg_err_pitch.set(f"{eep:+.1f}"),
+                                self.dbg_u_roll.set(f"{int(uu_r):+d}"),
+                                self.dbg_u_pitch.set(f"{int(uu_p):+d}"),
+                                self.dbg_u_yaw.set(f"{int(uu_y):+d}"),
+                                self.dbg_k.set(f"{kkk:.3f}"),
+                                self.dbg_sat.set(str(int(ss))),
+                                self.dbg_i_en.set(str(int(ie))),
+                            ))
+
+                            self.last_pwm = {"LF": lf, "RF": rf, "LB": lb, "RB": rb}
+
+                            t = time.monotonic() - self.t0
+                            self.t_hist.append(t)
+                            self.pwm_hist["LF"].append(lf)
+                            self.pwm_hist["RF"].append(rf)
+                            self.pwm_hist["LB"].append(lb)
+                            self.pwm_hist["RB"].append(rb)
+
+                            # log row (z debugami)
+                            self._append_telem_row(
+                                t, r, p, y, rc, pc, lf, rf, lb, rb,
+                                err_roll=er, err_pitch=ep,
+                                u_roll=u_roll, u_pitch=u_pitch, u_yaw=u_yaw,
+                                k=kk, sat=sat, i_enabled=i_en
+                            )
+
+                            if abs(r) >= self.tilt_kill_deg or abs(p) >= self.tilt_kill_deg:
+                                self.panic_kill(f"TILT {r:+.1f}/{p:+.1f} deg")
+
+                        else:
+                            self.log_put(f"RX: TELEM_LVL bad len={len(payload)} payload={payload.hex()}")
+
                     else:
-                        self.log_put("RX: NAV ACK ✓")
+                        self.log_put(f"RX: unknown cmd=0x{cmd:02X} len={len(payload)}")
 
-                elif cmd == CMD_PWM_DATA:
-                    if len(payload) == 8:
-                        lb, lf, rf, rb = struct.unpack("<HHHH", payload)
-                        self.last_pwm = {"LF": lf, "RF": rf, "LB": lb, "RB": rb}
+                except Exception as e:
+                    self.log_put(f"RX handler exception: cmd=0x{cmd:02X} len={len(payload)} err={e}")
 
-                        t = time.monotonic() - self.t0
-                        self.t_hist.append(t)
-                        self.pwm_hist["LF"].append(lf)
-                        self.pwm_hist["RF"].append(rf)
-                        self.pwm_hist["LB"].append(lb)
-                        self.pwm_hist["RB"].append(rb)
-                    else:
-                        self.log_put(f"RX: PWM DATA bad len={len(payload)}")
-
-                elif cmd == CMD_STAB_OFF_ACK:
-                    self.log_put("RX: STAB_OFF ACK ✓")
-
-                elif cmd == CMD_STATUS and len(payload) == 1:
-                    err = payload[0]
-                    self.log_put("RX STATUS: " + STATUS_STR.get(err, f"0x{err:02X}"))
-
-                elif cmd == CMD_IMU_DATA and len(payload) == 6:
-                    roll, pitch, yaw = struct.unpack("<hhh", payload)
-                    r = roll / 100.0
-                    p = pitch / 100.0
-                    y = yaw / 100.0
-                    self.last_imu = {"roll": r, "pitch": p, "yaw": y}
-                    self.log_put(f"RX IMU: R={r:.1f} P={p:.1f} Y={y:.1f}")
-
-                elif cmd == CMD_TELEM_DATA:
-                    if len(payload) == 14:
-                        roll, pitch, yaw, lb, lf, rf, rb = struct.unpack("<hhhHHHH", payload)
-
-                        r = roll / 100.0
-                        p = pitch / 100.0
-                        y = yaw / 100.0
-                        self.last_imu = {"roll": r, "pitch": p, "yaw": y}
-
-                        self.root.after(0, lambda rr=r, pp=p, yy=y: (
-                            self.ang_roll_raw.set(f"{rr:+.1f}"),
-                            self.ang_pitch_raw.set(f"{pp:+.1f}"),
-                            self.ang_yaw_raw.set(f"{yy:+.1f}"),
-                            self.ang_roll_cal.set("--.-"),
-                            self.ang_pitch_cal.set("--.-"),
-                            self.ang_yaw_cal.set("--.-"),
-                        ))
-
-                        self.last_pwm = {"LF": lf, "RF": rf, "LB": lb, "RB": rb}
-
-                        t = time.monotonic() - self.t0
-                        self.t_hist.append(t)
-                        self.pwm_hist["LF"].append(lf)
-                        self.pwm_hist["RF"].append(rf)
-                        self.pwm_hist["LB"].append(lb)
-                        self.pwm_hist["RB"].append(rb)
-
-                        self._append_telem_row(t, r, p, y, None, None, lf, rf, lb, rb)
-
-                        if abs(r) >= self.tilt_kill_deg or abs(p) >= self.tilt_kill_deg:
-                            self.panic_kill(f"TILT {r:+.1f}/{p:+.1f} deg")
-                            continue
-
-                elif cmd == CMD_TELEM_LVL_DATA:
-                    # payload: imu_raw(6) + roll_cal(2) + pitch_cal(2) + pwm(8) = 18B
-                    if len(payload) == 22:
-                        roll, pitch, yaw, roll_lvl, pitch_lvl, roll_ctrl, pitch_ctrl, lb, lf, rf, rb = \
-                            struct.unpack("<hhhhhhhHHHH", payload)
-
-                        r = roll / 100.0
-                        p = pitch / 100.0
-                        y = yaw / 100.0
-
-                        rc = roll_ctrl / 100.0
-                        pc = pitch_ctrl / 100.0
-
-                        self.last_imu = {"roll": r, "pitch": p, "yaw": y}
-                        self.last_cal = {"roll_cal": rc, "pitch_cal": pc}
-
-                        self.root.after(0, lambda rr=r, pp=p, yy=y, rrc=rc, ppc=pc: (
-                            self.ang_roll_raw.set(f"{rr:+.1f}"),
-                            self.ang_pitch_raw.set(f"{pp:+.1f}"),
-                            self.ang_yaw_raw.set(f"{yy:+.1f}"),
-                            self.ang_roll_cal.set(f"{rrc:+.1f}"),
-                            self.ang_pitch_cal.set(f"{ppc:+.1f}"),
-                            self.ang_yaw_cal.set(f"{yy:+.1f}"),
-                        ))
-
-                        self.last_pwm = {"LF": lf, "RF": rf, "LB": lb, "RB": rb}
-
-                        t = time.monotonic() - self.t0
-                        self.t_hist.append(t)
-                        self.pwm_hist["LF"].append(lf)
-                        self.pwm_hist["RF"].append(rf)
-                        self.pwm_hist["LB"].append(lb)
-                        self.pwm_hist["RB"].append(rb)
-
-                        self._append_telem_row(t, r, p, y, rc, pc, lf, rf, lb, rb)
-
-                        if abs(r) >= self.tilt_kill_deg or abs(p) >= self.tilt_kill_deg:
-                            self.panic_kill(f"TILT {r:+.1f}/{p:+.1f} deg")
-                            continue
-
-                    else:
-                        self.log_put(f"RX: TELEM_LVL bad len={len(payload)}")
-
-                else:
-                    self.log_put(f"RX: unknown cmd=0x{cmd:02X} len={len(payload)}")
 
             time.sleep(0.005)
 
