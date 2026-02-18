@@ -5,7 +5,6 @@
 ../Core/Src/main.c:604:13:SetPwm	2
 ../Core/Src/main.c:461:13:ESP_Send	1
 ../Core/Src/main.c:468:12:ESP_WaitFor	5
-../Core/Src/main.c:339:14:CgBiasScale	3
 ../Core/Src/main.c:446:5:_write	1
 ../Core/Src/main.c:501:6:ESP_Init	5
 ../Core/Src/main.c:1385:6:SystemClock_Config	3

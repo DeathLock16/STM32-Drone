@@ -53,11 +53,11 @@ typedef enum {
 
 #define STAB_KP_ROLL    26.0f
 #define STAB_KD_ROLL    7.0f
-#define STAB_KI_ROLL    0.45f
+#define STAB_KI_ROLL    0.25f
 
 #define STAB_KP_PITCH   26.0f
 #define STAB_KD_PITCH   9.0f
-#define STAB_KI_PITCH   0.45f
+#define STAB_KI_PITCH   0.25f
 
 #define STAB_U_MAX      4200.0f
 #define STAB_I_MAX      5200.0f
@@ -82,17 +82,17 @@ typedef enum {
 #define BASE_SLEW_PWM_PER_S      7000.0f
 #define NAV_BIAS_SLEW_PWM_PER_S    6000.0f
 
-#define MOTOR_GAIN_LF   1.150f
+#define MOTOR_GAIN_LF   1.0
 #define MOTOR_GAIN_LB   1.000f
-#define MOTOR_GAIN_RF   1.275f
-#define MOTOR_GAIN_RB   1.150f
+#define MOTOR_GAIN_RF   1.0
+#define MOTOR_GAIN_RB   1.0
 
-#define MOTOR_OFFS_LF   150.0f
+#define MOTOR_OFFS_LF   0.0f
 #define MOTOR_OFFS_LB   0.0f
-#define MOTOR_OFFS_RF   250.0f
-#define MOTOR_OFFS_RB   200.0f
+#define MOTOR_OFFS_RF   0.0f
+#define MOTOR_OFFS_RB   0.0f
 
-#define YAW_TRIM        450.0f
+#define YAW_TRIM        0.0f
 #define ROLL_TRIM_DEG   0.00f
 #define PITCH_TRIM_DEG  0.00f
 
@@ -100,17 +100,17 @@ typedef enum {
 #define LEVEL_CALIB_GYRO_MAX_DPS    2.5f
 #define LEVEL_CALIB_ACC_OK_REQUIRED 1
 
-#define CG_ROLL_BIAS_GROUND_PWM   -215
-#define CG_ROLL_BIAS_AIR_PWM      -215
+#define CG_ROLL_BIAS_GROUND_PWM   0
+#define CG_ROLL_BIAS_AIR_PWM      0
 
-#define CG_PITCH_BIAS_GROUND_PWM  -75
-#define CG_PITCH_BIAS_AIR_PWM     -75
+#define CG_PITCH_BIAS_GROUND_PWM  0
+#define CG_PITCH_BIAS_AIR_PWM     0
 
-#define CG_BIAS_START_PWM   1400u
-#define CG_BIAS_FULL_PWM    3200u
+#define CG_BIAS_START_PWM   0u
+#define CG_BIAS_FULL_PWM    0u
 
-#define I_ENABLE_BASE_PWM   7800
-#define I_DISABLE_BASE_PWM  7400
+#define I_ENABLE_BASE_PWM   1000
+#define I_DISABLE_BASE_PWM  500
 
 #define NAV_TILT_DEG        10.0f
 #define NAV_YAW_RATE_DPS    180.0f
@@ -121,7 +121,7 @@ typedef enum {
 #define TAKEOFF_BLEND_FULL_PWM   1.0f
 #define TAKEOFF_BLEND_MIN        1.0f
 
-#define ACT_ENABLE_BASE_PWM     7800u
+#define ACT_ENABLE_BASE_PWM     9999
 #define ACT_MAX_ANGLE_DEG       2.0f
 #define ACT_MAX_RATE_DPS        15.0f
 #define ACT_K                  4.0f

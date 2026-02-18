@@ -5,7 +5,6 @@
 ../Core/Src/main.c:604:13:SetPwm	0	static
 ../Core/Src/main.c:461:13:ESP_Send	16	static
 ../Core/Src/main.c:468:12:ESP_WaitFor	96	static
-../Core/Src/main.c:339:14:CgBiasScale	0	static
 ../Core/Src/main.c:446:5:_write	8	static
 ../Core/Src/main.c:501:6:ESP_Init	24	static
 ../Core/Src/main.c:1385:6:SystemClock_Config	88	static,ignoring_inline_asm
